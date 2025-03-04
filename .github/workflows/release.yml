@@ -1,0 +1,88 @@
+name: Publish a Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The version tag to use in the form of x.x.x"
+        required: true
+        type: string
+      prerelease:
+        description: "Check if this is to publish a pre-release."
+        required: true
+        type: boolean
+      skiputs:
+        description: "Check to skip unit test execution (not advised)."
+        required: true
+        type: boolean
+
+jobs:
+  make-tag-string:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.tag-string.outputs.tag }}
+    steps:
+      - name: Create tag string
+        run: |
+          [ ${{ inputs.prerelease }} = false ] && echo "tag=${{ inputs.version }}" >> $GITHUB_OUTPUT || \
+            echo "tag=${{ inputs.version }}rc$GITHUB_RUN_NUMBER" >> $GITHUB_OUTPUT
+        id: tag-string
+
+  validate-no-tag:
+    runs-on: ubuntu-latest
+    needs: [make-tag-string]
+    steps:
+      - name: Fetch Code
+        continue-on-error: true
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+        with:
+          ref: refs/tags/${{ needs.make-tag-string.outputs.tag }}
+
+      - name: Fail if tag ${{ needs.make-tag-string.outputs.tag }} exists
+        run: |
+          [[ $(git describe --tags) ==  ${{ needs.make-tag-string.outputs.tag }} ]] && exit 1 || :
+
+  create-tag:
+    runs-on: ubuntu-latest
+    needs: [make-tag-string, validate-no-tag]
+    outputs:
+      done: ${{ steps.done_check.outputs.status }}
+    permissions:
+      contents: write
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+        
+      - name: Set Version
+        if: ${{ inputs.version != '' }}
+        run: |
+          git config --global user.email "${{ github.triggering_actor }}"
+          git config --global user.name "${{ github.triggering_actor }}"
+          git tag ${{ needs.make-tag-string.outputs.tag }}
+          git push origin --tags
+
+      - name: Set tag status
+        id: done_check
+        run: |
+          echo "status=true" >> "$GITHUB_OUTPUT"
+
+  publish-release:
+    permissions:
+      contents: write
+    needs: [make-tag-string, create-tag]
+    uses: ./.github/workflows/build.yml
+    with:
+      version: ${{ needs.make-tag-string.outputs.tag }}
+      prerelease: ${{ inputs.prerelease }}
+
+  remove-tag-on-failure:
+    needs: [make-tag-string, create-tag, publish-release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    if: ${{ failure() && needs.create-tag.outputs.done }}
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
+      - name: Remove CodeTag
+        run: git push origin ':refs/tags/${{ needs.make-tag-string.outputs.tag }}'

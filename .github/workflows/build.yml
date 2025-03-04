@@ -1,0 +1,67 @@
+name: Build Steps [called]
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: ''
+      prerelease:
+        type: boolean
+        default: false
+      buildonly:
+        type: boolean
+        default: false
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+        with:
+          ref: ${{ inputs.version }}
+
+      - uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
+        with:
+          python-version: "3.12"
+
+      - name: Build package
+        run: |
+          echo "__version__='${{ inputs.version }}'" > cxoneflow_audit/__version__.py
+          pip3 install build
+          python3 -m build
+
+      - name: Make release text
+        if: ${{ ! inputs.buildonly }} 
+        run: |
+          WHEEL_NAME=$(basename $(ls dist/*.whl))
+          WHEEL_HASH=$(pip3 hash dist/$WHEEL_NAME | grep "^--")
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ inputs.version }}/$WHEEL_NAME"
+
+          echo "# CxOneFlow Audit Tool ${{ inputs.version }}" > release.md
+
+          echo 'Installation can be performed by executing the following in a command shell:' >> release.md
+
+          echo '```' >> release.md
+          echo pip install $RELEASE_URL >> release.md
+          echo '```' >> release.md
+
+          echo "## Hashes" >> release.md
+          echo "### $WHEEL_NAME" >> release.md
+          echo '```' >> release.md
+          echo "$WHEEL_HASH" >> release.md
+          echo '```' >> release.md
+
+
+      - name: Create GitHub release
+        if: ${{ ! inputs.buildonly }} 
+        id: create_release
+        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5
+        with:
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: ./dist/*.whl
+          bodyFile: release.md
+          name: ${{ inputs.version }}
+          prerelease: ${{ inputs.prerelease }}
+          tag: ${{ inputs.version }}
