@@ -1,6 +1,9 @@
 name: Publish a Release
 on:
   workflow_dispatch:
+
+# on:
+#   workflow_dispatch:
     inputs:
       version:
         description: "The version tag to use in the form of x.x.x"
