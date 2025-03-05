@@ -57,7 +57,7 @@ class AdoAuditor(Auditor, AdoBase):
 
   async def __validate_event_set(self, project_id : str, event_name : str, record_lambda : Awaitable, url : str, common_params : Dict) -> None:
     query = parse("$.value[?(@.publisherInputs.projectId == '" + project_id + 
-                  "' & @.consumerInputs.url == '" + self.__endpoint_url + "')]")
+                  "' & @.consumerInputs.url =~ '" + self.__endpoint_url + "')]")
 
     params = {"eventType" : event_name}
     params.update(common_params)

@@ -86,8 +86,7 @@ async def main():
 
   -q                        Do not output logs to the console.
                             
-  -t THREADS                The number of concurrent scan report generations. 
-                            [default: 4]
+  -t THREADS                The number of concurrent SCM read/write operations. [default: 4]
   
   Network Configuration
 
@@ -134,7 +133,7 @@ async def main():
   
   SCM Options
 
-  --pat PAT                  An SCM PAT with administrative privileges
+  --pat PAT                  An SCM PAT with appropriate privileges.
 
   --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
 
