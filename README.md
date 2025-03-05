@@ -1,6 +1,6 @@
 # CxOneFlow Audit Tool
 
-This tool can be used to audit, configured, and de-configure CxOneFlow event web hooks in an SCM.
+This is a command line tool that can be used to audit, configure, and de-configure CxOneFlow event web hooks in an SCM.
 
 This currently only works with Azure DevOps Cloud and Enterprise.
 
