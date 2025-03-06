@@ -1,4 +1,6 @@
 from cxoneflow_audit.core import Remover
 
 class AdoRemover(Remover):
-  pass
+  @property
+  def _scm_name(self) -> str:
+    return "ADO"

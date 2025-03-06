@@ -5,6 +5,8 @@ from cxoneflow_audit.__version__ import __version__
 from cxoneflow_audit.log import bootstrap
 from cxoneflow_audit.scm import scm_map
 from cxoneflow_audit.util import NameMatcher
+import requests
+requests.packages.urllib3.disable_warnings()
 
 DEFAULT_LOGLEVEL="INFO"
 PROGNAME=f"cxoneflow-audit {__version__}"
@@ -36,8 +38,7 @@ async def dispatch(args) -> int:
   
   common_args = [args['TARGETS'], concurrency, matcher, 
                   resolve_from_env(args['--pat'], 'CX_PAT'), 
-                  args['--cx-url'], 
-                  resolve_from_env(args['--shared-secret'], 'CX_SECRET'),
+                  args['--cx-url'],
                   args['--scm-url'], proxy, args['-k'] ]
   
   op = None
@@ -45,7 +46,7 @@ async def dispatch(args) -> int:
     # pylint: disable=E1102
     op = scm_map[scm_key].Auditor(args['--outfile'], args['--no-config'], *common_args)
   elif args["--deploy"]:
-    pass
+    op = scm_map[scm_key].Deployer(resolve_from_env(args['--shared-secret'], 'CX_SECRET'), args['--replace'],  *common_args)
   elif args["--remove"]:
     pass
   else:
@@ -60,7 +61,7 @@ async def main():
                             [--match-regex M_REGEX | --skip-regex S_REGEX] 
                             (--audit [--outfile CSVFILE] [--no-config] 
                               | --remove 
-                              | --deploy (--shared-secret SECRET | --shared-secret-env) )
+                              | --deploy (--shared-secret SECRET | --shared-secret-env) [--replace])
                             (--cx-url URL --scm-url SCMURL (--pat PAT | --pat-env) )
                             (ado TARGETS...)
 
@@ -108,10 +109,6 @@ async def main():
   --cx-url CX_URL            The base URL for the CxOneFlow endpoint 
                              (e.g. https://cxoneflow.corp.com)
 
-  --shared-secret SECRET     The shared secret configured in the service hook
-
-  --shared-secret-env        Obtain the shared secret from the environment variable 'CX_SECRET'
-
   
   Action Options
 
@@ -130,7 +127,15 @@ async def main():
 
   --no-config                Only include projects that are not configured
                              or are partially configured.
-  
+
+  Options for --deploy
+
+  --shared-secret SECRET     The shared secret configured in the service hook
+
+  --shared-secret-env        Obtain the shared secret from the environment variable 'CX_SECRET'
+
+  --replace                  If an existing webhook subscription is found, replace it.
+
   SCM Options
 
   --pat PAT                  An SCM PAT with appropriate privileges.
@@ -149,7 +154,9 @@ async def main():
               not args['-q'], args['--log-file'])
     
     _log = logging.getLogger("main")
+    _log.info(PROGNAME)
     _log.debug(f"{PROGNAME} START")
+
 
     result = await dispatch(args)
 

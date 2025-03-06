@@ -18,7 +18,7 @@ class NameMatcher:
     return inst
 
 
-  def should_keep(self, test_value : str) -> bool:
+  def matches(self, test_value : str) -> bool:
     result = self.__regex.search(test_value)
 
     return not bool(result) if self.__invert else bool(result)
