@@ -6,6 +6,7 @@ from cxoneflow_audit.log import bootstrap
 from cxoneflow_audit.scm import scm_map
 from cxoneflow_audit.util import NameMatcher
 import requests
+# pylint: disable=E1101
 requests.packages.urllib3.disable_warnings()
 
 DEFAULT_LOGLEVEL="INFO"
@@ -46,6 +47,7 @@ async def dispatch(args) -> int:
     # pylint: disable=E1102
     op = scm_map[scm_key].Auditor(args['--outfile'], args['--no-config'], *common_args)
   elif args["--deploy"]:
+    # pylint: disable=E1102
     op = scm_map[scm_key].Deployer(resolve_from_env(args['--shared-secret'], 'CX_SECRET'), args['--replace'],  *common_args)
   elif args["--remove"]:
     pass
