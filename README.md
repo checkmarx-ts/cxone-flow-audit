@@ -1,6 +1,6 @@
 # CxOneFlow Audit Tool
 
-This is a command line tool that can be used to audit, configure, and de-configure CxOneFlow event web hooks in an SCM.
+This is a command line tool that can be used to audit, configure, and de-configure [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) event web hooks in an SCM.
 
 This currently only works with Azure DevOps Cloud and Enterprise.
 
@@ -21,9 +21,9 @@ to obtain the URL of the latest release binary.
 
 There are 3 functions that can be performed by `cxoneflow-audit`:
 
-* Audit: This creates a CSV file showing configuration status for CxOneFlow webhooks.
-* Deploy: Deploys required configurations for CxOneFlow webhooks.
-* Remove: Removes deployed configurations for CxOneFlow webhooks.
+* Audit: This creates a CSV file showing configuration status for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
+* Deploy: Deploys required configurations for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
+* Remove: Removes deployed configurations for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
 
 After installation, executing the command `cxoneflow-audit -h` will show detailed help.
 
@@ -63,14 +63,14 @@ These options are mutually exclusive.
 
 |Option|Optional|Description|
 |-|-|-|
-|`--match-regex M_REGEX`|Y|Regular expression that matches projects/orgs that should be configured to send events to CxOneFlow.|
-|`--skip-regex S_REGEX`|Y|Regular expression that matches projects/orgs that *should not* be configured to send events to CxOneFlow.|
+|`--match-regex M_REGEX`|Y|Regular expression that matches projects/orgs that should be configured to send events to [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow).|
+|`--skip-regex S_REGEX`|Y|Regular expression that matches projects/orgs that *should not* be configured to send events to [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow).|
 
 #### CxOneFlow Endpoint Options
 
 |Option|Optional|Description|
 |-|-|-|
-|`--cx-url CX_URL`|N| The base URL for the CxOneFlow endpoint (e.g. https://cxoneflow.corp.com)|
+|`--cx-url CX_URL`|N| The base URL for the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint (e.g. https://cxoneflow.corp.com)|
 
 #### SCM Options
 
@@ -107,7 +107,7 @@ for deployment.
 
 |Option|Optional|Description|
 |-|-|-|
-|`--cx-url CX_URL`|N| The base URL for the CxOneFlow endpoint (e.g. https://cxoneflow.corp.com)|
+|`--cx-url CX_URL`|N| The base URL for the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint (e.g. https://cxoneflow.corp.com)|
 |`--replace`|Y| This forces any existing service hook definitions to be deleted and replaced.|
 |`--shared-secret SECRET`|See Note|The shared secret configured in the service hook.
 |`--shared-secret-env`|See Note|Obtain the shared secret from the environment variable `CX_SECRET`
@@ -137,7 +137,7 @@ by using the `--match-regex` option.
 ### Azure DevOps
 
 Modifying and reading service hook settings is an administrative function.  The user that owns the PAT
-must be in the `Project Collection Administrators` group.  The PAT that is used by CxOneFlow
+must be in the `Project Collection Administrators` group.  The PAT that is used by [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow)
 does not need to be in an administrative group.
 
 The PAT used when invoking `cxoneflow-audit` must have these minimum permissions:
@@ -195,7 +195,7 @@ cxoneflow-audit --cx-url https://cxoneflow.corp.com \
 
 #### Deployment Example
 
-To deploy service hook configurations that point to the CxOneFlow endpoint `https://cxoneflow.corp.com` in **all** projects under the target collections, 
+To deploy service hook configurations that point to the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint `https://cxoneflow.corp.com` in **all** projects under the target collections, 
 the command line would be similar to the following example:
 
 ```
@@ -234,7 +234,7 @@ cxoneflow-audit --cx-url https://cxoneflow.corp.com \
 
 #### Remove Example
 
-To remove **all** service hook configurations that point to the CxOneFlow endpoint `https://cxoneflow.corp.com`,
+To remove **all** service hook configurations that point to the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint `https://cxoneflow.corp.com`,
 the command line would be similar to the following example:
 
 ```
@@ -287,7 +287,7 @@ Check the following:
 
 * The user that owns the PAT is in the `Project Collection Administrators` group for each target collection.
 * The PAT has appropriate permissions as specified in [Azure DevOps](#azure-devops).
-* The CxOneFlow URL is the base URL for the CxOneFlow endpoint (e.g. without the `/adoe` route at the end)
+* The [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) URL is the base URL for the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint (e.g. without the `/adoe` route at the end)
 
 #### Some, but not all, of the webhook events are rejected by CxOneFlow.
 
