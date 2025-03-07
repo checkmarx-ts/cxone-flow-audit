@@ -67,28 +67,18 @@ class AdoDeployer(Deployer, AdoBase):
       raise ScmException(f"Exception trying to delete service hook subscription {sub_id} from {collection}")
 
   async def _process_lu(self, lu : Any) -> bool:
-    events = ["git.push", "git.pullrequest.created", "git.pullrequest.updated"]
     subs = self._get_subs_for_project(await self._list_lu_webhook_subscriptions(self.scm_base_url, lu['collection'], 
                                 self.scm_pat, self.proxies, self.ignore_ssl_errors), 
-                                 lu['id'], self._make_cx_endpoint_url(self.cxone_flow_url), events)
+                                 lu['id'], self._make_cx_endpoint_url(self.cxone_flow_url), AdoBase.ADO_EVENT_TYPES)
     
     hook_data = self._hook_data_from_lu_factory(lu)
 
-    push = self.__find_sub_for_event("git.push", subs)
-    if push:
-      self._update_hook_push_from_sub_json(hook_data, push)
+    for event in AdoBase.ADO_EVENT_TYPES:
+      sub = self.__find_sub_for_event(event, subs)
+      if sub:
+        self._update_hook_by_event_type(event, hook_data, sub)
 
-    create = self.__find_sub_for_event("git.pullrequest.created", subs)
-    if create:
-      self._update_hook_pr_create_from_sub_json(hook_data, create)
-
-    update = self.__find_sub_for_event("git.pullrequest.updated", subs)
-    if update:
-      self._update_hook_pr_update_from_sub_json(hook_data, update)
-
-    config_state = await self._evaluate_subscription_state(hook_data)
-
-    if config_state == ConfigState.CONFIGURED and not self.replace:
+    if await self._evaluate_subscription_state(hook_data) == ConfigState.CONFIGURED and not self.replace:
       self.log().warning(f"{self._get_lu_repr(lu)} is already configured, no changes made.")
       return True
     
@@ -98,6 +88,6 @@ class AdoDeployer(Deployer, AdoBase):
     if len(sub_ids) > 0:
       await wait([get_running_loop().create_task(self.__delete_subscription(lu['collection'], sub_id)) for sub_id in sub_ids])
 
-    await wait([get_running_loop().create_task(self.__create_subscription(event, lu['id'], lu['collection'])) for event in events])
+    await wait([get_running_loop().create_task(self.__create_subscription(event, lu['id'], lu['collection'])) for event in AdoBase.ADO_EVENT_TYPES])
     
     return True

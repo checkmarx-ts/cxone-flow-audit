@@ -38,6 +38,8 @@ class AdoBase:
 
   ADO_API_VERSION = "7.1"
 
+  ADO_EVENT_TYPES = ["git.push", "git.pullrequest.created", "git.pullrequest.updated"]
+
   def __init__(self):
     self.__lock = Lock()
     self.__sub_cache = {}
@@ -81,7 +83,8 @@ class AdoBase:
     else:
       return ConfigState.PARTIAL_CONFIG
 
-  def _update_hook_push_from_sub_json(self, data : HookData, sub_json : Dict) -> None:
+  @staticmethod
+  def _update_hook_push_from_sub_json(data : HookData, sub_json : Dict) -> None:
       data.hasEventPush = (sub_json['status'] == "enabled")
       data.pushEventCreateDate = sub_json['createdDate']
       data.pushEventCreatedBy = sub_json['createdBy']['uniqueName']
@@ -89,7 +92,8 @@ class AdoBase:
       data.pushEventModBy = sub_json['modifiedBy']['uniqueName']
       data.pushEventStatus = sub_json['status']
 
-  def _update_hook_pr_create_from_sub_json(self, data : HookData, sub_json : Dict) -> None:
+  @staticmethod
+  def _update_hook_pr_create_from_sub_json(data : HookData, sub_json : Dict) -> None:
       data.hasEventPrCreate = (sub_json['status'] == "enabled")
       data.prCreateEventCreateDate = sub_json['createdDate']
       data.prCreateEventCreatedBy = sub_json['createdBy']['uniqueName']
@@ -97,13 +101,18 @@ class AdoBase:
       data.prCreateEventModBy = sub_json['modifiedBy']['uniqueName']
       data.prCreateEventStatus = sub_json['status']
 
-  def _update_hook_pr_update_from_sub_json(self, data : HookData, sub_json : Dict) -> None:
+  @staticmethod
+  def _update_hook_pr_update_from_sub_json(data : HookData, sub_json : Dict) -> None:
       data.hasEventPrUpdate = (sub_json['status'] == "enabled")
       data.prUpdateEventCreateDate = sub_json['createdDate']
       data.prUpdateEventCreatedBy = sub_json['createdBy']['uniqueName']
       data.prUpdateEventModDate = sub_json['modifiedDate']
       data.prUpdateEventModBy = sub_json['modifiedBy']['uniqueName']
       data.prUpdateEventStatus = sub_json['status']
+
+  @staticmethod
+  def _update_hook_by_event_type(event_type : str, data : HookData, sub_json : Dict) -> None:
+    return AdoBase.__update_map[event_type](data, sub_json)
 
   def _hook_data_from_lu_factory(self, lu_json : Dict) -> HookData:
     return HookData( projectCollection=lu_json['collection'], 
@@ -168,3 +177,9 @@ class AdoBase:
         else:
           self.log().error(f"Response of {resp.status_code} invoking {project_list_url}.")
           break
+
+  __update_map = {
+    "git.pullrequest.updated" : _update_hook_pr_update_from_sub_json,
+    "git.pullrequest.created" : _update_hook_pr_create_from_sub_json,
+    "git.push" : _update_hook_push_from_sub_json,
+  }
