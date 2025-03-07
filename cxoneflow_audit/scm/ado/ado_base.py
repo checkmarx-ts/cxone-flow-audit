@@ -1,5 +1,6 @@
 import urllib.parse
 from cxoneflow_audit.core.common import ConfigState
+from cxoneflow_audit.util import ScmException
 from dataclasses import dataclass
 from typing import Dict, AsyncGenerator, List, Any
 from asyncio import to_thread, gather, Lock
@@ -175,8 +176,9 @@ class AdoBase:
             ret_val['collection'] = t
             yield ret_val
         else:
-          self.log().error(f"Response of {resp.status_code} invoking {project_list_url}.")
-          break
+          msg = f"Response of {resp.status_code} invoking {project_list_url}."
+          self.log().error(msg)
+          raise ScmException(msg)
 
   __update_map = {
     "git.pullrequest.updated" : _update_hook_pr_update_from_sub_json,

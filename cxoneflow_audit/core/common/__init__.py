@@ -88,7 +88,10 @@ class Operation:
 
     self.log().debug(f"{len(lus)} LUs found for SCM {self._scm_name}")
 
-    task_result, _ = await asyncio.wait([asyncio.get_running_loop()
+    task_result = []
+
+    if len(lus) > 0:
+      task_result, _ = await asyncio.wait([asyncio.get_running_loop()
                                          .create_task(self.__thread(t)) for t in lus]) 
     ret = 0
     for res in task_result:

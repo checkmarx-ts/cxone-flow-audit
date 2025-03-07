@@ -50,7 +50,8 @@ async def dispatch(args) -> int:
     # pylint: disable=E1102
     op = scm_map[scm_key].Deployer(resolve_from_env(args['--shared-secret'], 'CX_SECRET'), args['--replace'],  *common_args)
   elif args["--remove"]:
-    pass
+    # pylint: disable=E1102
+    op = scm_map[scm_key].Remover(*common_args)
   else:
     raise Exception("Unknown action!")
   
@@ -150,12 +151,15 @@ async def main():
                              ADO Enterprise Example: https://ado.corp.com
   """
   try:
+    can_log = False
+
     args = docopt(main.__doc__, version=PROGNAME)
 
     bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'], 
               not args['-q'], args['--log-file'])
     
     _log = logging.getLogger("main")
+    can_log = True
     _log.info(PROGNAME)
     _log.debug(f"{PROGNAME} START")
 
@@ -166,16 +170,25 @@ async def main():
 
     exit (result)
   except DocoptExit as bad_args:
-    print("Incorrect arguments provided.")
-    print(bad_args)
+    if can_log:
+      _log.exception(bad_args)
+    else:
+      print("Incorrect arguments provided.")
+      print(bad_args)
     exit(1)
   except NotImplementedError as ni:
-    print(f"Not implemented: {ni}")
+    if can_log:
+      _log.exception(ni)
+    else:
+      print(f"Not implemented: {ni}")
     exit(1)
   except SystemExit:
     pass
   except BaseException as ex:
-    print(ex)
+    if can_log:
+      _log.exception(ex)
+    else:
+      print(ex)
     exit(1)
 
 if __name__ == "__main__":
