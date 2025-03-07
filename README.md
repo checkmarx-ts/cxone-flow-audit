@@ -22,11 +22,13 @@ to obtain the URL of the latest release binary.
 There are 3 functions that can be performed by `cxoneflow-audit`:
 
 * Audit: This creates a CSV file showing configuration status for CxOneFlow webhooks.
-* Deploy: (Coming soon) Deploys required configurations for CxOneFlow webhooks.
-* Remove: (Coming soon) Removes deployed configurations for CxOneFlow webhooks.
+* Deploy: Deploys required configurations for CxOneFlow webhooks.
+* Remove: Removes deployed configurations for CxOneFlow webhooks.
 
 After installation, executing the command `cxoneflow-audit -h` will show detailed help.
 
+The audit function is limited to reading service hook configuration.  It is suggested to
+review the audit output before using the deploy or remove functions.
 
 ### General Configuration Options
 
@@ -99,41 +101,58 @@ Parameters that can be used with `--audit`:
 
 ### Deploy (`--deploy`)
 
-When executing
+This function sets the webhook configurations on the targets specified. The
+options `--skip-regex` and `--match-regex` can control which targets are selected
+for deployment.
 
 |Option|Optional|Description|
 |-|-|-|
 |`--cx-url CX_URL`|N| The base URL for the CxOneFlow endpoint (e.g. https://cxoneflow.corp.com)|
+|`--replace`|Y| This forces any existing service hook definitions to be deleted and replaced.|
 |`--shared-secret SECRET`|See Note|The shared secret configured in the service hook.
 |`--shared-secret-env`|See Note|Obtain the shared secret from the environment variable `CX_SECRET`
 
 Note: One of `--shared-secret` or `--shared-secret-env` is required when using the `--deploy`
 function.
 
-### Azure DevOps (`ado`)
+### Remove (`--remove`)
 
-The option `ado TARGETS...` indicates the operation is performed against an Azure DevOps
-cloud or enterprise instance.  The `TARGETS...` are one or more collections
-found at the instance URL.  (e.g. `DefaultCollection`, `Corp`, etc).
+This function removes the webhook configurations from the targets specified. The
+options `--skip-regex` and `--match-regex` can control which targets are selected
+for deployment.
+
+
+### Azure DevOps (`ado TARGETS...`)
+
+The option `ado TARGETS...` indicates the operation is performed against collections
+configured in an Azure DevOps cloud or enterprise instance.
+The `TARGETS...` are one or more collections found at the instance URL.  (e.g. `DefaultCollection`, `Corp`, etc).  Service hooks are applied to each project
+found in the specified collection.
+
+Projects can be omitted by using the `--skip-regex` option or limited to certain projects
+by using the `--match-regex` option.
 
 ## SCM Specific Information
 
 ### Azure DevOps
 
-The minimum permissions provided by a PAT for each function are:
+Modifying and reading service hook settings is an administrative function.  The user that owns the PAT
+must be in the `Project Collection Administrators` group.  The PAT that is used by CxOneFlow
+does not need to be in an administrative group.
 
-|Function|Permissions|
-|-|-|
-|`--audit`| `Build::Read`, `Code::Read`, `Project and Team::Read`, `Service Connections::Read & Query`
-|`--deploy`|TBD|
-|`--remove`|TBD|
+The PAT used when invoking `cxoneflow-audit` must have these minimum permissions:
 
-#### Audit Example
+* Build::Read
+* Code::Read
+* Project and Team::Read
+* Service Connections::Read & Query
 
-Assume there is an Azure DevOps Enterprise instance located at `https://ado.corp.com`
+For the following examples, assume there is an Azure DevOps Enterprise instance located at `https://ado.corp.com`
 with the following collections defined:
 
 ![ADO collections](img/ado_collections.png)
+
+#### Audit Example
 
 An example command line to perform the audit function would be similar to:
 
@@ -141,6 +160,7 @@ An example command line to perform the audit function would be similar to:
 cxoneflow-audit --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
+  --audit \
   ado DefaultCollection EastCoast WestCoast
 ```
 
@@ -156,6 +176,7 @@ cxoneflow-audit --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
   --match-regex '^New.York|^Los.Angeles' \
+  --audit \
   ado DefaultCollection EastCoast WestCoast
 ```
 
@@ -174,8 +195,102 @@ cxoneflow-audit --cx-url https://cxoneflow.corp.com \
 
 #### Deployment Example
 
-TBD
+To deploy service hook configurations that point to the CxOneFlow endpoint `https://cxoneflow.corp.com` in **all** projects under the target collections, 
+the command line would be similar to the following example:
+
+```
+cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+  --pat <your PAT> \
+  --scm-url https://ado.corp.com \
+  --deploy --shared-secret <secret> \
+  ado DefaultCollection EastCoast WestCoast
+```
+
+In the below example, the service hooks would be deployed only to projects
+beginning with "New York" or "Los Angeles":
+
+```
+cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+  --pat <your PAT> \
+  --scm-url https://ado.corp.com \
+  --match-regex '^New.York|^Los.Angeles' \
+  --deploy --shared-secret <secret> \
+  ado DefaultCollection EastCoast WestCoast
+```
+
+Note the single-quotes surrounding the regular expression.
+
+The example below is similar but will only deploy service hooks to projects that
+*do not* begin with "New York" or "Los Angeles":
+
+```
+cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+  --pat <your PAT> \
+  --scm-url https://ado.corp.com \
+  --skip-regex '^New.York|^Los.Angeles' \
+  --deploy --shared-secret <secret> \
+  ado DefaultCollection EastCoast WestCoast
+```
 
 #### Remove Example
 
-TBD
+To remove **all** service hook configurations that point to the CxOneFlow endpoint `https://cxoneflow.corp.com`,
+the command line would be similar to the following example:
+
+```
+cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+  --pat <your PAT> \
+  --scm-url https://ado.corp.com \
+  --remove
+  ado DefaultCollection EastCoast WestCoast
+```
+
+In the below example, the service hooks would be removed only from projects
+beginning with "New York" or "Los Angeles":
+
+```
+cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+  --pat <your PAT> \
+  --scm-url https://ado.corp.com \
+  --match-regex '^New.York|^Los.Angeles' \
+  --remove
+  ado DefaultCollection EastCoast WestCoast
+```
+
+Note the single-quotes surrounding the regular expression.
+
+The example below is similar but will only remove service hooks from projects that
+*do not* begin with "New York" or "Los Angeles":
+
+```
+cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+  --pat <your PAT> \
+  --scm-url https://ado.corp.com \
+  --skip-regex '^New.York|^Los.Angeles' \
+  --remove \
+  ado DefaultCollection EastCoast WestCoast
+```
+
+
+## Troubleshooting
+
+### Azure DevOps
+
+#### Turn on Debug
+
+Use the `--level DEBUG` option to turn on debug output.  Capture the debug log if it is necessary to request
+help from Checkmarx Professional Solutions.
+
+#### The audit CSV shows nothing is configured but service hook configurations can be observed.
+
+Check the following:
+
+* The user that owns the PAT is in the `Project Collection Administrators` group for each target collection.
+* The PAT has appropriate permissions as specified in [Azure DevOps](#azure-devops).
+* The CxOneFlow URL is the base URL for the CxOneFlow endpoint (e.g. without the `/adoe` route at the end)
+
+#### Some, but not all, of the webhook events are rejected by CxOneFlow.
+
+The shared secret that is configured with some service hook configurations may be wrong
+or outdated.  Deploy the service hooks while using the `--replace` option to force
+the service hook definitions to be updated with the current shared secret.
