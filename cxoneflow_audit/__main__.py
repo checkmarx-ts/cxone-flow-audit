@@ -150,8 +150,9 @@ async def main():
                              ADO Cloud Example: https://dev.azure.com
                              ADO Enterprise Example: https://ado.corp.com
   """
+  can_log = False
+  
   try:
-    can_log = False
 
     args = docopt(main.__doc__, version=PROGNAME)
 
