@@ -87,10 +87,10 @@ SCM URL Examples:
 
 ### Audit (`--audit`)
 
-When the `--audit` parameter is selected, a CSV of configured web hooks
+When the `--audit` parameter is selected, a CSV of configured webhooks
 for the SCM is generated.  The configuration is performed at the "organization" level
 (with the concept of "organization" varying by SCM) so the audit will not
-show web hook configurations set on individual repositories.
+show webhook configurations set on individual repositories.
 
 Parameters that can be used with `--audit`:
 
@@ -119,7 +119,7 @@ function.
 
 This function removes the webhook configurations from the targets specified. The
 options `--skip-regex` and `--match-regex` can control which targets are selected
-for deployment.
+for removal.
 
 
 ### Azure DevOps (`ado TARGETS...`)
@@ -137,8 +137,7 @@ by using the `--match-regex` option.
 ### Azure DevOps
 
 Modifying and reading service hook settings is an administrative function.  The user that owns the PAT
-must be in the `Project Collection Administrators` group.  The PAT that is used by [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow)
-does not need to be in an administrative group.
+must be in the `Project Collection Administrators` group.
 
 The PAT used when invoking `cxoneflow-audit` must have these minimum permissions:
 
@@ -190,6 +189,7 @@ cxoneflow-audit --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
   --skip-regex '^New.York|^Los.Angeles' \
+  --audit
   ado DefaultCollection EastCoast WestCoast
 ```
 
@@ -274,12 +274,28 @@ cxoneflow-audit --cx-url https://cxoneflow.corp.com \
 
 ## Troubleshooting
 
-### Azure DevOps
+### All SCMs
 
 #### Turn on Debug
 
-Use the `--level DEBUG` option to turn on debug output.  Capture the debug log if it is necessary to request
-help from Checkmarx Professional Solutions.
+The first troubleshooting step is to turn on debug logging.
+Use the `--level DEBUG` option to turn on debug output.  Capture the debug log if it is necessary to request help from Checkmarx Professional Solutions.
+
+#### Multiple scans executing on push/pull-request events
+
+The `cxoneflow-audit` tool is intended to audit and manage webhook deployments at a level that will apply to multiple
+repositories.  It does not look at individual repository settings.  If a repository has been configured to send webhook
+events, it is possible that the events are being emitted more than once.
+
+To resolve the issue, remove all webhook event configurations made at the repository level.
+
+#### Some, but not all, of the webhook events are rejected by CxOneFlow.
+
+The shared secret that is configured with some webhook configurations may be wrong
+or outdated.  Use the `cxoneflow-audit` deploy function with the `--replace` option 
+to force the webhook definitions to be updated with the current shared secret.
+
+### Azure DevOps
 
 #### The audit CSV shows nothing is configured but service hook configurations can be observed.
 
@@ -289,8 +305,3 @@ Check the following:
 * The PAT has appropriate permissions as specified in [Azure DevOps](#azure-devops).
 * The [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) URL is the base URL for the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint (e.g. without the `/adoe` route at the end)
 
-#### Some, but not all, of the webhook events are rejected by CxOneFlow.
-
-The shared secret that is configured with some service hook configurations may be wrong
-or outdated.  Deploy the service hooks while using the `--replace` option to force
-the service hook definitions to be updated with the current shared secret.
