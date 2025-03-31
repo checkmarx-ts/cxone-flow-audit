@@ -27,7 +27,7 @@ jobs:
 
       - name: Build package
         run: |
-          echo "__version__='${{ inputs.version }}'" > cxoneflow_audit/__version__.py
+          echo "__version__='${{ inputs.version }}'" > cxoneflow_audit/__version__/__version__.py
           pip3 install build
           python3 -m build
 
