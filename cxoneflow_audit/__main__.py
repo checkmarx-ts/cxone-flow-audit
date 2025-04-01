@@ -1,160 +1,60 @@
-import asyncio, logging, re, os
+import asyncio, logging, os
 from asyncio import Semaphore
 from docopt import docopt, DocoptExit
-from cxoneflow_audit.__version__ import __version__
+from cxoneflow_audit.__version__ import __version__, PROGNAME
 from cxoneflow_audit.log import bootstrap
-from cxoneflow_audit.scm import scm_map
 from cxoneflow_audit.util import NameMatcher
+from cxoneflow_audit.scm.ado import AdoTool
+
 import requests
 # pylint: disable=E1101
 requests.packages.urllib3.disable_warnings()
 
 DEFAULT_LOGLEVEL="INFO"
-PROGNAME=f"cxoneflow-audit {__version__}"
-
-def resolve_from_env(value, env_key):
-  if value is not None:
-    return value
-  elif env_key in os.environ.keys():
-    return os.environ[env_key]
-  else:
-    return None
-
-
-async def dispatch(args) -> int:
-  concurrency = Semaphore(int(args['-t']))
-  proxy = { "http" : args['--proxy'], "https" : args['--proxy']} if args['--proxy'] is not None else None
-
-  if args['--skip-regex'] is not None:
-    matcher = NameMatcher.create_as_skip(args['--skip-regex'])
-  elif args['--match-regex'] is not None:
-    matcher = NameMatcher.create_as_match(args['--match-regex'])
-  else:
-    matcher = NameMatcher.create_as_match(".*")
-
-  if args['ado']:
-    scm_key = "ado"
-  else:
-    raise Exception("Unknown SCM")
-  
-  common_args = [args['TARGETS'], concurrency, matcher, 
-                  resolve_from_env(args['--pat'], 'CX_PAT'), 
-                  args['--cx-url'],
-                  args['--scm-url'], proxy, args['-k'] ]
-  
-  op = None
-  if args["--audit"]:
-    # pylint: disable=E1102
-    op = scm_map[scm_key].Auditor(args['--outfile'], args['--no-config'], *common_args)
-  elif args["--deploy"]:
-    # pylint: disable=E1102
-    op = scm_map[scm_key].Deployer(resolve_from_env(args['--shared-secret'], 'CX_SECRET'), args['--replace'],  *common_args)
-  elif args["--remove"]:
-    # pylint: disable=E1102
-    op = scm_map[scm_key].Remover(*common_args)
-  else:
-    raise Exception("Unknown action!")
-  
-  return await op.execute()
-
 
 async def main():
-  """Usage: cxoneflow-audit [-h | --help | -v | --version] [-t THREADS]
-                            [--level LOGLEVEL] [--log-file LOGFILE] [-qk] [--proxy IP:PORT]
-                            [--match-regex M_REGEX | --skip-regex S_REGEX] 
-                            (--audit [--outfile CSVFILE] [--no-config] 
-                              | --remove 
-                              | --deploy (--shared-secret SECRET | --shared-secret-env) [--replace])
-                            (--cx-url URL --scm-url SCMURL (--pat PAT | --pat-env) )
-                            (ado TARGETS...)
-
-                            
-  TARGETS...                One or more logical unit names where service hook
-                            configurations will be created
-
-                            For Azure DevOps, collection names are targets
-
-  Global Options
-
-  -h --help                 Show this help.
-
-  -v --version              Show version and exit.
+  """Usage: cxoneflow-audit [--level LOGLEVEL] [--log-file LOGFILE] [-qk] [-t THREADS] [--proxy PROXY_URL] <scm> [<args>...]
   
+  <scm> can be one of:
+  adoe                Commands for Azure DevOps
+  gh                  Commands for GitHub
+  gl                  Commands for Gitlab
+  bbdc                Commands for BitBucket Data Center
 
-  Run Configuration
+  Use "cxoneflow-audit help <scm>" for help details for each SCM.
 
-  --level LOGLEVEL          Log level [default: INFO]
-                            Use: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  Runtime Information
+
+  -h,--help           Use this parameter to show help for any command.
+
+  -v,--version        Show version and exit.
+
   
-  --log-file LOGFILE        A file where logs are written.
+  Logging Options
 
-  -q                        Do not output logs to the console.
-                            
-  -t THREADS                The number of concurrent SCM read/write operations. [default: 4]
+  --level LOGLEVEL    Log level [default: INFO]
+                      Use: DEBUG, INFO, WARNING, ERROR, CRITICAL
   
-  Network Configuration
+  --log-file LOGFILE  A file where logs are written.
 
-  -k                        Ignore SSL verification failures. 
+  -q                  Do not output logs to the console.
+
+  
+  Runtime Options
+
+  -t THREADS                The number of concurrent SCM read/write operations. [Default: 4]
+  
+  -k                        Ignore SSL verification failures. [Default: False]
 
   --proxy PROXY_URL         A proxy server to use for communication.
-
-
-  Filtering Options
-
-  --match-regex M_REGEX      Regular expression that matches projects/orgs that
-                             should be configured to send events to CxOneFlow
-
-  --skip-regex S_REGEX       Regular expression that matches projects/orgs that
-                             *should not* be configured to send events to CxOneFlow
   
-  Webhook Configuration Parameters
-  
-  --cx-url CX_URL            The base URL for the CxOneFlow endpoint 
-                             (e.g. https://cxoneflow.corp.com)
-
-  
-  Action Options
-
-  --audit                    Create a CSV that lists CxOneFlow event configuration status of each
-                             project/organization.
-
-  --deploy                   Configure matching projects/orgs to send events to CxOneFlow
-  
-  --remove                   Remove CxOneFlow webhook configuration for matching projects/orgs
-
-  
-  Options for --audit
-
-  --outfile CSVFILE          The path to a file where the audit CSV will be
-                             written. [default: ./cxoneflow.csv]
-
-  --no-config                Only include projects that are not configured
-                             or are partially configured.
-
-  Options for --deploy
-
-  --shared-secret SECRET     The shared secret configured in the service hook
-
-  --shared-secret-env        Obtain the shared secret from the environment variable 'CX_SECRET'
-
-  --replace                  If an existing webhook subscription is found, replace it.
-
-  SCM Options
-
-  --pat PAT                  An SCM PAT with appropriate privileges.
-
-  --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
-
-  --scm-url URL              The URL to the SCM instance
-                             
-                             ADO Cloud Example: https://dev.azure.com
-                             ADO Enterprise Example: https://ado.corp.com
   """
+                          
   can_log = False
   
   try:
 
-    args = docopt(main.__doc__, version=PROGNAME)
+    args = docopt(main.__doc__, version=PROGNAME, options_first = True)
 
     bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'], 
               not args['-q'], args['--log-file'])
@@ -164,18 +64,28 @@ async def main():
     _log.info(PROGNAME)
     _log.debug(f"{PROGNAME} START")
 
+    result = 1
 
-    result = await dispatch(args)
+    main_map = {
+      "adoe" : AdoTool(**(common_args(args))),
+    }
+
+
+    if args['<scm>'] in ['help', None]:
+      scm = args['<args>'][0] if len(args['<args>']) > 0 else None
+
+      result = await main_map[scm](args['<args>'], True)
+    elif args['<scm>'] in main_map.keys():
+      result = await main_map[args['<scm>']](args['<args>'])
+    else:
+      raise Exception(f"Unknown SCM: {args["<scm>"]}")
 
     _log.debug(f"{PROGNAME} END with exit code {result}")
 
     exit (result)
   except DocoptExit as bad_args:
-    if can_log:
-      _log.exception(bad_args)
-    else:
-      print("Incorrect arguments provided.")
-      print(bad_args)
+    print("Incorrect arguments provided.")
+    print(bad_args)
     exit(1)
   except NotImplementedError as ni:
     if can_log:

@@ -3,7 +3,7 @@ from cxoneflow_audit.util import NameMatcher
 from typing import Dict, List, AsyncGenerator, Any
 import logging, asyncio
 from enum import Enum
-from dataclasses import dataclass
+
 
 class ConfigState(Enum):
   def __str__(self):

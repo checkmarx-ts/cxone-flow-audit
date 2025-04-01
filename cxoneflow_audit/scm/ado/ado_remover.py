@@ -4,8 +4,8 @@ from typing import Any, Dict, AsyncGenerator
 from asyncio import wait, get_running_loop
 
 class AdoRemover(Remover, AdoServiceManager):
-  def __init__(self, *args):
-    Remover.__init__(self, *args)
+  def __init__(self, *args, **kwargs):
+    Remover.__init__(self, *args, **kwargs)
     AdoServiceManager.__init__(self)
 
   @property

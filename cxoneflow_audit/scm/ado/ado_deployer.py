@@ -6,8 +6,8 @@ from .ado_servicemgr import AdoServiceManager
 
 class AdoDeployer(Deployer, AdoServiceManager):
 
-  def __init__(self, *args):
-    Deployer.__init__(self, *args)
+  def __init__(self, *args, **kwargs):
+    Deployer.__init__(self, *args, **kwargs)
     AdoServiceManager.__init__(self)
 
   @property

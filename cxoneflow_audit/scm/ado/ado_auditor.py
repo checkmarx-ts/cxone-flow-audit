@@ -7,8 +7,8 @@ from .ado_base import AdoBase, HookData
 
 class AdoAuditor(Auditor, AdoBase):
 
-  def __init__(self, *args):
-    Auditor.__init__(self, *args)
+  def __init__(self, *args, **kwargs):
+    Auditor.__init__(self, *args, **kwargs)
     AdoBase.__init__(self)
 
   @property
