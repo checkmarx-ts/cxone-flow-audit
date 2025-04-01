@@ -12,6 +12,24 @@ requests.packages.urllib3.disable_warnings()
 
 DEFAULT_LOGLEVEL="INFO"
 
+def resolve_from_env(value, env_key):
+  if value is not None:
+    return value
+  elif env_key in os.environ.keys():
+    return os.environ[env_key]
+  else:
+    return None
+
+
+
+def common_args(args):
+  return {
+    "concurrency" : Semaphore(int(args['-t'])),
+    "proxy" : { "http" : args['--proxy'], "https" : args['--proxy']} if args['--proxy'] is not None else None,
+    "ssl_ignore" : args['-k']
+  }
+
+
 async def main():
   """Usage: cxoneflow-audit [--level LOGLEVEL] [--log-file LOGFILE] [-qk] [-t THREADS] [--proxy PROXY_URL] <scm> [<args>...]
   
@@ -70,16 +88,16 @@ async def main():
       "adoe" : AdoTool(**(common_args(args))),
     }
 
+    scm = args['<scm>']
 
-    if args['<scm>'] in ['help', None]:
+    if scm in ['help', None]:
       scm = args['<args>'][0] if len(args['<args>']) > 0 else None
 
       result = await main_map[scm](args['<args>'], True)
-    elif args['<scm>'] in main_map.keys():
-      result = await main_map[args['<scm>']](args['<args>'])
+    elif scm in main_map.keys():
+      result = await main_map[scm](args['<args>'])
     else:
-      un_scm = args['<scm>']
-      raise Exception(f"Unknown SCM: {un_scm}")
+      raise Exception(f"Unknown SCM: {scm}")
 
     _log.debug(f"{PROGNAME} END with exit code {result}")
 
