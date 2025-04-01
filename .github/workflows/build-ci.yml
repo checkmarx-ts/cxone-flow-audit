@@ -1,5 +1,6 @@
 name: CI Build Steps [called]
 on:
+  workflow_dispatch:
   workflow_call:
     secrets:
       TEST_TENANT_ID:
