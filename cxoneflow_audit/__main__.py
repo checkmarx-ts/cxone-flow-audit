@@ -78,7 +78,8 @@ async def main():
     elif args['<scm>'] in main_map.keys():
       result = await main_map[args['<scm>']](args['<args>'])
     else:
-      raise Exception(f"Unknown SCM: {args["<scm>"]}")
+      un_scm = args['<scm>']
+      raise Exception(f"Unknown SCM: {un_scm}")
 
     _log.debug(f"{PROGNAME} END with exit code {result}")
 
