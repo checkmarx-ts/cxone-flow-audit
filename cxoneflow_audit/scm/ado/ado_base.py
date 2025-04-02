@@ -3,8 +3,9 @@ from cxoneflow_audit.core.common import ConfigState
 from cxoneflow_audit.util import ScmException
 from dataclasses import dataclass
 from typing import Dict, AsyncGenerator, List, Any
-from asyncio import to_thread, gather, Lock
+from asyncio import to_thread, Lock
 import base64, requests, logging
+from cxoneflow_audit.__version__ import PROGNAME
 from jsonpath_ng.ext import parse
 
 @dataclass(frozen=False)
@@ -65,15 +66,18 @@ class AdoBase:
     u = base_url.rstrip('/')
     return f"{u}/adoe"
 
-  def _auth_headers(self, scm_pat : str) -> Dict:
+  def _required_headers(self, scm_pat : str) -> Dict:
     auth_b64 = base64.b64encode(f":{scm_pat}".encode("UTF-8")).decode()
-    return { "Authorization" : f"Basic {auth_b64}" }
+    return { 
+      "Authorization" : f"Basic {auth_b64}",
+      "User-Agent" : PROGNAME
+      }
 
   def _api_ver_url_params(self, version : str = ADO_API_VERSION) -> str:
     return {"api-version" : version}
 
   def _org_url(self, base_url : str, collection : str) -> str:
-    return f"{base_url}/{urllib.parse.quote_plus(collection)}"
+    return f"{base_url}/{urllib.parse.quote(collection)}"
 
   async def _evaluate_subscription_state(self, data : HookData) -> ConfigState:
     if data.hasEventPrCreate and data.hasEventPrUpdate and data.hasEventPush:
@@ -145,7 +149,7 @@ class AdoBase:
     service_params.update(self._api_ver_url_params())
 
     resp = await to_thread(requests.request, "GET", service_hooks_url, params=service_params,
-                     headers=self._auth_headers(scm_pat), proxies=proxies, verify=not ignore_ssl_errors)
+                     headers=self._required_headers(scm_pat), proxies=proxies, verify=not ignore_ssl_errors)
     
     if not resp.ok:
       self.log().error(f"Response of {resp.status_code} trying to retrieve service hook data from: {service_hooks_url}")
@@ -164,7 +168,7 @@ class AdoBase:
       while True:
 
         resp = await to_thread(requests.request, "GET", project_list_url, params=self.__project_list_url_params(skip), 
-                            headers=self._auth_headers(scm_pat), proxies=proxies, verify=not ignore_ssl_errors)
+                            headers=self._required_headers(scm_pat), proxies=proxies, verify=not ignore_ssl_errors)
 
         if resp.ok:
           json = resp.json()

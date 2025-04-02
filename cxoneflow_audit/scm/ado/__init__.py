@@ -1,6 +1,7 @@
 from cxoneflow_audit.scm.ado.ado_auditor import AdoAuditor
 from cxoneflow_audit.scm.ado.ado_deployer import AdoDeployer
 from cxoneflow_audit.scm.ado.ado_remover import AdoRemover
+from cxoneflow_audit.scm.ado.ado_kicker import AdoKicker
 from typing import List
 from docopt import docopt
 from cxoneflow_audit.scm.common import SCMTool
@@ -17,8 +18,8 @@ class AdoTool(SCMTool):
                       (--pat PAT | --pat-env) (--scm-url URL)
                       (--cx-url CX_URL) TARGETS...
     
-    TARGETS...                  One or more collection names where service hook
-                                configurations will be created on each project.
+    TARGETS...                  One or more collection names where containing projects
+                                where service hook configurations will be audited.
 
     Deployment Options
 
@@ -40,6 +41,7 @@ class AdoTool(SCMTool):
                                should be configured to send events to CxOneFlow.
 
     --skip-regex S_REGEX       Regular expression that matches ADO projects that
+                               should not be configured to send events to CxOneFlow.
 
     SCM Options
 
@@ -47,7 +49,7 @@ class AdoTool(SCMTool):
 
     --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
 
-    --scm-url URL              The URL to the SCM instance
+    --scm-url URL              The URL to the SCM instance (e.g. https://dev.azure.com)
     """
     args = self._get_opts(self.ado_audit.__doc__, ["adoe", "audit"] + ado_args, help)
 
@@ -84,6 +86,7 @@ class AdoTool(SCMTool):
                                should be configured to send events to CxOneFlow.
 
     --skip-regex S_REGEX       Regular expression that matches ADO projects that
+                               should not be configured to send events to CxOneFlow.
 
     SCM Options
 
@@ -91,7 +94,7 @@ class AdoTool(SCMTool):
 
     --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
 
-    --scm-url URL              The URL to the SCM instance
+    --scm-url URL              The URL to the SCM instance (e.g. https://dev.azure.com)
 
     """
     args = self._get_opts(self.ado_deploy.__doc__, ["adoe", "deploy"] + ado_args, help)
@@ -105,13 +108,12 @@ class AdoTool(SCMTool):
   
 
   async def ado_remove(self, ado_args : List[str], help : bool = False):
-    """Usage: cxoneflow-audit adoe remove 
-                      [--match-regex M_REGEX | --skip-regex S_REGEX]
+    """Usage: cxoneflow-audit adoe remove [--match-regex M_REGEX | --skip-regex S_REGEX]
                       (--pat PAT | --pat-env) (--scm-url URL)
                       (--cx-url CX_URL) TARGETS...
     
     TARGETS...                  One or more collection names where service hook
-                                configurations will be created on each project.
+                                configurations will be removed from each project.
 
     Deployment Options
 
@@ -124,14 +126,14 @@ class AdoTool(SCMTool):
                                should be configured to send events to CxOneFlow.
 
     --skip-regex S_REGEX       Regular expression that matches ADO projects that
-
+                               should not be configured to send events to CxOneFlow.
     SCM Options
 
     --pat PAT                  An SCM PAT with appropriate privileges.
 
     --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
 
-    --scm-url URL              The URL to the SCM instance
+    --scm-url URL              The URL to the SCM instance (e.g. https://dev.azure.com)
     """
     args = self._get_opts(self.ado_remove.__doc__, ["adoe", "remove"] + ado_args, help)
     
@@ -142,8 +144,56 @@ class AdoTool(SCMTool):
                             cx_url=args['--cx-url'], scm_url=args['--scm-url']).execute()
   
 
-  async def ado_kickoff(self, ado_args : List[str]):
-      pass
+  async def ado_kickoff(self, ado_args : List[str], help : bool = False):
+    """Usage: cxoneflow-audit adoe kickoff [--match-regex M_REGEX | --skip-regex S_REGEX]
+                      (--pat PAT | --pat-env) (--scm-url URL)
+                      (--ssh-key-path SSHKEY) [--ssh-key-pass SSHPASS | --ssh-key-env]
+                      (--cx-url CX_URL) TARGETS...
+    
+    TARGETS...                  One or more collection names containing projects
+                                for which all repositories will be scanned.
+
+    Deployment Options
+
+    --cx-url CX_URL             The base URL for the CxOneFlow endpoint 
+                                (e.g. https://cxoneflow.corp.com)
+
+    --ssh-key-path SSHKEY       The path to a file containing a PEM encoded
+                                SSH private key for authenticating with the
+                                CxOneFlow kickoff API
+
+    --ssh-key-pass SSHPASS      The password to the SSH private key if it is
+                                password protected.
+
+    --ssh-key-env               Indicates that the SSH key password should be
+                                obtained from the environment variable CX_SSHPASS.
+
+    Filtering Options
+
+    --match-regex M_REGEX      Regular expression that matches ADO projects that
+                               should be configured to send events to CxOneFlow.
+
+    --skip-regex S_REGEX       Regular expression that matches ADO projects that
+                               should not be configured to send events to CxOneFlow.
+
+    SCM Options
+
+    --pat PAT                  An SCM PAT with appropriate privileges.
+
+    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+
+    --scm-url URL              The URL to the SCM instance (e.g. https://dev.azure.com)
+
+    """
+    args = self._get_opts(self.ado_kickoff.__doc__, ["adoe", "kickoff"] + ado_args, help)
+
+    return await AdoKicker(targets=args['TARGETS'], concurrency=self.concurrency, proxy=self.proxy,
+                            ignore_ssl_errors=self.ssl_ignore,
+                            match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
+                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
+                            ssh_private_key_path=args['--ssh-key-path'], 
+                            ssh_private_key_password=SCMTool.resolve_from_env(args['--ssh-key-pass'], "CX_SSHPASS"),
+                            cx_url=args['--cx-url'], scm_url=args['--scm-url']).execute()
 
 
   async def __call__(self, ado_args : List[str], help : bool = False):

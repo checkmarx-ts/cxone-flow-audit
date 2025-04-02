@@ -93,7 +93,13 @@ async def main():
     if scm in ['help', None]:
       scm = args['<args>'][0] if len(args['<args>']) > 0 else None
 
-      result = await main_map[scm](args['<args>'], True)
+      if scm is None:
+        scm_list = ",".join(main_map.keys())
+        print(f"Please specify one of the following scm names: {scm_list}")
+      elif not scm in main_map.keys():
+        print(f"{scm} not implemented.")
+      else:
+        result = await main_map[scm](args['<args>'], True)
     elif scm in main_map.keys():
       result = await main_map[scm](args['<args>'])
     else:

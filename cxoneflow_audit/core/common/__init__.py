@@ -73,7 +73,7 @@ class Operation:
       if self.__match.matches(self._get_lu_name(lu)):
         return await self._process_lu(lu)
       else:
-        self.log().debug(f"LU skipped due to no match: {self._get_lu_repr(lu)}")
+        self.log().info(f"LU skipped due to match rules: {self._get_lu_repr(lu)}")
 
   async def _process_lu(self, lu : Any) -> bool:
     raise NotImplementedError("_process_lu")
