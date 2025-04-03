@@ -146,7 +146,7 @@ class AdoTool(SCMTool):
 
   async def ado_kickoff(self, ado_args : List[str], help : bool = False):
     """Usage: cxoneflow-audit adoe kickoff [--match-regex M_REGEX | --skip-regex S_REGEX]
-                      (--pat PAT | --pat-env) (--scm-url URL)
+                      (--pat PAT | --pat-env) (--scm-url URL) [--audit-file AUDIT_FILE]
                       (--ssh-key-path SSHKEY) [--ssh-key-pass SSHPASS | --ssh-key-env]
                       (--cx-url CX_URL) TARGETS...
     
@@ -157,6 +157,10 @@ class AdoTool(SCMTool):
 
     --cx-url CX_URL             The base URL for the CxOneFlow endpoint 
                                 (e.g. https://cxoneflow.corp.com)
+
+    --audit-file AUDIT_FILE     A path to a file where audit data about the
+                                started scans is written. Data is appended
+                                to the file if it exists. [Default: kickoff_audit.csv]
 
     --ssh-key-path SSHKEY       The path to a file containing a PEM encoded
                                 SSH private key for authenticating with the
@@ -188,7 +192,7 @@ class AdoTool(SCMTool):
     args = self._get_opts(self.ado_kickoff.__doc__, ["adoe", "kickoff"] + ado_args, help)
 
     return await AdoKicker(targets=args['TARGETS'], concurrency=self.concurrency, proxy=self.proxy,
-                            ignore_ssl_errors=self.ssl_ignore,
+                            ignore_ssl_errors=self.ssl_ignore, audit_file_path=args['--audit-file'],
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
                             pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
                             ssh_private_key_path=args['--ssh-key-path'], 
