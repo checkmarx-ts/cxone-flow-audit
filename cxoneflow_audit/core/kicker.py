@@ -40,7 +40,7 @@ class Kicker(Operation):
     if status == KickoffStatusCodes.TOO_MANY_SCANS:
       self.log().info(f"Server has {len(msg.running_scans)} running scans, asked to back off.  Delaying {delay} seconds before trying to start scan.")
       for scan in msg.running_scans:
-        self.log().info(f"Executing: {scan.project_name}@{scan.scan_branch} (Scan Id: {scan.scan_id})")
+        self.log().info(f"Running: {scan.project_name}@{scan.scan_branch} (Scan Id: {scan.scan_id})")
     else:
       self.log().info(f"Server status: {status}")
 
