@@ -60,11 +60,11 @@ async def main():
   
   Runtime Options
 
-  -t THREADS                The number of concurrent SCM read/write operations. [Default: 4]
+  -t THREADS         The number of concurrent SCM read/write operations. [Default: 4]
   
-  -k                        Ignore SSL verification failures. [Default: False]
+  -k                 Ignore SSL verification failures. [Default: False]
 
-  --proxy PROXY_URL         A proxy server to use for communication.
+  --proxy PROXY_URL  A proxy server to use for communication.
   
   """
                           
