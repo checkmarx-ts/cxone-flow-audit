@@ -35,7 +35,7 @@ class AdoServiceManager(AdoBase):
 
     create_url = f"{self._org_url(scm_base_url, collection)}/_apis/hooks/subscriptions"
     resp = await to_thread(requests.request, "POST", create_url, params=self._api_ver_url_params(), json=payload,
-      headers=self._auth_headers(scm_pat), proxies=proxies, verify=not ignore_ssl_errors)
+      headers=self._required_headers(scm_pat), proxies=proxies, verify=not ignore_ssl_errors)
     
     if not resp.ok:
       self.log().error(f"Response code {resp.status_code} returned for {create_url}")
@@ -46,7 +46,7 @@ class AdoServiceManager(AdoBase):
     delete_url = f"{self._org_url(scm_base_url, collection)}/_apis/hooks/subscriptions/{sub_id}"
 
     resp = await to_thread(requests.request, "DELETE", delete_url, params=self._api_ver_url_params(),
-                    headers=self._auth_headers(scm_pat), proxies=proxies, verify=not ignore_ssl_errors)
+                    headers=self._required_headers(scm_pat), proxies=proxies, verify=not ignore_ssl_errors)
     
     if not resp.ok:
       self.log().error(f"Response code {resp.status_code} returned for {delete_url}")

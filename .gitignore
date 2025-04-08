@@ -1,7 +1,7 @@
 # Testing output
 .vscode
 **/*.csv
-
+secrets/**
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
