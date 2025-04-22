@@ -75,7 +75,8 @@ class AdoKicker(Kicker, AdoBase):
       ref_params.update(self._api_ver_url_params())
       ref_url = self._org_url(self.scm_base_url, collection_name) + f"/{urllib.parse.quote(project_name)}/_apis/git/repositories/" + \
         f"{urllib.parse.quote(repo_name)}/refs"
-      ref_list = await to_thread(requests.request, "GET", ref_url, params=ref_params, headers=self._required_headers(self.scm_pat))
+      ref_list = await to_thread(requests.request, "GET", ref_url, params=ref_params, headers=self._required_headers(self.scm_pat), 
+                                 proxies=self.proxies, verify=not self.ignore_ssl_errors)
 
       if not ref_list.ok:
         self.log().warning(f"{ref_list.status_code} returned when attempting to retrieve the ref list for repo {repo_name} in LU {lu_repr}")
@@ -108,7 +109,9 @@ class AdoKicker(Kicker, AdoBase):
   
     repo_url = self._org_url(self.scm_base_url, lu['collection']) + f"/{urllib.parse.quote(project_name)}/_apis/git/repositories"
 
-    repo_list = await to_thread(requests.request, "GET", repo_url, params=self._api_ver_url_params(), headers=self._required_headers(self.scm_pat))
+    repo_list = await to_thread(requests.request, "GET", repo_url, params=self._api_ver_url_params(), 
+                                headers=self._required_headers(self.scm_pat), 
+                                proxies=self.proxies, verify=not self.ignore_ssl_errors)
 
     if not repo_list.ok:
       self.log().error(f"{repo_list.status_code} returned attempting to obtain a list of repositories for LU {self._render_lu_repr(lu)}")
