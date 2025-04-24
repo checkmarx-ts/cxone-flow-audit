@@ -73,7 +73,7 @@ class Operation:
       if self.__match.matches(self._get_lu_name(lu)):
         return await self._process_lu(lu)
       else:
-        self.log().debug(f"LU skipped due to no match: {self._get_lu_repr(lu)}")
+        self.log().info(f"LU skipped due to match rules: {self._get_lu_repr(lu)}")
 
   async def _process_lu(self, lu : Any) -> bool:
     raise NotImplementedError("_process_lu")
@@ -91,14 +91,14 @@ class Operation:
     task_result = []
 
     if len(lus) > 0:
-      task_result, _ = await asyncio.wait([asyncio.get_running_loop()
-                                         .create_task(self.__thread(t)) for t in lus]) 
-    ret = 0
+      task_result = await asyncio.gather(*[asyncio.get_running_loop()
+                                         .create_task(self.__thread(t)) for t in lus], return_exceptions=True) 
+    result_code = 0
     for res in task_result:
       if isinstance(res, BaseException):
         self.log().exception(res)
-        ret = max(ret, 2)
+        result_code = max(result_code, 2)
       elif not res:
-        ret = 100
+        result_code = 100
 
-    return ret
+    return result_code

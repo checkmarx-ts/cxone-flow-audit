@@ -17,130 +17,321 @@ pip install https://github.com/checkmarx-ts/cxone-flow-audit/releases/download/X
 Please visit the [GitHub Releases](https://github.com/checkmarx-ts/cxone-flow-audit/releases)
 to obtain the URL of the latest release binary.
 
+## Operations
 
-## Executing
-
-There are 3 functions that can be performed by `cxoneflow-audit`:
+`cxoneflow-audit` can perform the following functions for the supported SCMs:
 
 * Audit: This creates a CSV file showing configuration status for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
 * Deploy: Deploys required configurations for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
 * Remove: Removes deployed configurations for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
+* Kickoff: Iterates through repositories, invokes an initial scan via [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow).
 
-After installation, executing the command `cxoneflow-audit -h` will show detailed help.
+The functions work with each SCM differently depending on how the SCM organizes repositories.
 
-The audit function is limited to reading service hook configuration.  It is suggested to
-review the audit output before using the deploy or remove functions.
+### Kickoff
 
-### General Configuration Options
+Before attempting to execute `cxoneflow-audit` using the kickoff function, it is recommended that
+CxOneFlow be fully configured and tested to successfully handle webhook events from the
+repositories to be scanned.  This will ensure that a service definition is available to
+execute the scan upon receipt of the kickoff request.
 
-The general options are used for all operations.
+To execute the `cxoneflow-audit` kickoff scans, it is required that an SSH public/private key pair is generated.  The
+CxOneFlow endpoint is then configured to use the public key to identify the kickoff scan request originator.
+The public key must be provided to the CxOneFlow endpoint administrator to configure the CxOneFlow endpoint.  
 
-#### Informational Options
-|Option|Description|
-|-|-|
-|`-h` or `--help`|Show detailed help and exit.|
-|`-v` or `--version`|Show the `cxoneflow-audit` release version and exit.|
+The most compatible way to generate an SSH public/private key pair is to execute the command `ssh-keygen -t ed25519`
+and follow the prompts. Please refer to the CxOneFlow manual for further information about generating an
+SSH public/private key pair using `ssh-keygen`.
 
+Unlike the other functions, the kickoff function can take a significant amount of time to execute.  
+The kickoff can be stopped and re-started without duplicating scans.
 
-#### Logging Options
+The [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint can be configured for a maximum of 10
+concurrent kickoff scans.  The number of concurrent kickoff scans must be throttled to avoid
+consuming all concurrent scan capacity. If the server indicates there are too many concurrent scans running,
+the `cxoneflow-audit` execution will pause until the server accepts another scan.  When all repositories
+have had at least one scan submitted, `cxoneflow-audit` will exit.  An audit CSV file is written to record
+errors or scan ids that were associated with each repository.
 
-|Option|Optional|Description|
-|-|-|-|
-|`--level LOGLEVEL`|Y|Logging output level, defaults to `INFO`.<br>Can be set to: `DEBUG`, `INFO`, `WARNING`, `ERROR`, or `CRITICAL`|
-|`--log-file LOGFILE`|Y|A file where logs are written in addition to displaying logs on the console.|
-|`-q`|Y|Do not output logs on the console.|
-
-#### Runtime and Networking Options
-
-|Option|Optional|Description|
-|-|-|-|
-|`-t THREADS`|Y| The number of concurrent SCM read/write operations. [default: 4]|
-|`-k`|Y|Ignore SSL verification failures.|
-|`--proxy PROXY_URL`|Y|A proxy server to use for communication.|
-
-#### Filtering Options
-
-These options are mutually exclusive.
-
-|Option|Optional|Description|
-|-|-|-|
-|`--match-regex M_REGEX`|Y|Regular expression that matches projects/orgs that should be configured to send events to [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow).|
-|`--skip-regex S_REGEX`|Y|Regular expression that matches projects/orgs that *should not* be configured to send events to [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow).|
-
-#### CxOneFlow Endpoint Options
-
-|Option|Optional|Description|
-|-|-|-|
-|`--cx-url CX_URL`|N| The base URL for the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint (e.g. https://cxoneflow.corp.com)|
-
-#### SCM Options
-
-|Option|Optional|Description|
-|-|-|-|
-|`--pat PAT`|N|An SCM PAT with appropriate privileges to execute the selected `cxoneflow-audit` function.|
-|`--pat-env`|N|Obtain the PAT from the environment variable `CX_PAT` instead of providing it on the command line with `--pat`.|
-|`--scm-url URL`|N|The URL to the SCM instance.|
-
-SCM URL Examples:                             
-* ADO Cloud: https://dev.azure.com
-* ADO Enterprise: https://ado.corp.com
+Not all repositories will be scanned at the time of the kickoff scan request.  If a repository
+in a kickoff scan request is matched to a CheckmarxOne project that has at least one scan
+on any branch, no scan is performed.  As repositories are iterated, scans are skipped if the
+server's duplicate detecting logic determines no scan is required.  
 
 
-### Audit (`--audit`)
+## Execution
 
-When the `--audit` parameter is selected, a CSV of configured webhooks
-for the SCM is generated.  The configuration is performed at the "organization" level
-(with the concept of "organization" varying by SCM) so the audit will not
-show webhook configurations set on individual repositories.
+After installation, executing the command `cxoneflow-audit -h` will show detailed help:
 
-Parameters that can be used with `--audit`:
+```
+Usage: cxoneflow-audit [--level LOGLEVEL] [--log-file LOGFILE] [-qk] [-t THREADS] [--proxy PROXY_URL] <scm> [<args>...]
 
-|Parameter|Optional|Description|
-|-|-|-|
-| `--outfile CSVFILE` |Y|If provided, sets the path to the CSV file created.  Default: ./cxoneflow.csv |
-| `--no-config` |Y|The output of the CSV will contain only those organizations that are not configured or are partially configured.|
+  <scm> can be one of:
+  adoe                Commands for Azure DevOps
+  gh                  Commands for GitHub
+  gl                  Commands for Gitlab
+  bbdc                Commands for BitBucket Data Center
 
-### Deploy (`--deploy`)
+  Use "cxoneflow-audit help <scm>" for help details for each SCM.
 
-This function sets the webhook configurations on the targets specified. The
-options `--skip-regex` and `--match-regex` can control which targets are selected
-for deployment.
+  Runtime Information
 
-|Option|Optional|Description|
-|-|-|-|
-|`--cx-url CX_URL`|N| The base URL for the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint (e.g. https://cxoneflow.corp.com)|
-|`--replace`|Y| This forces any existing service hook definitions to be deleted and replaced.|
-|`--shared-secret SECRET`|See Note|The shared secret configured in the service hook.
-|`--shared-secret-env`|See Note|Obtain the shared secret from the environment variable `CX_SECRET`
+  -h,--help           Use this parameter to show help for any command.
 
-Note: One of `--shared-secret` or `--shared-secret-env` is required when using the `--deploy`
-function.
-
-### Remove (`--remove`)
-
-This function removes the webhook configurations from the targets specified. The
-options `--skip-regex` and `--match-regex` can control which targets are selected
-for removal.
+  -v,--version        Show version and exit.
 
 
-### Azure DevOps (`ado TARGETS...`)
+  Logging Options
 
-The option `ado TARGETS...` indicates the operation is performed against collections
-configured in an Azure DevOps cloud or enterprise instance.
-The `TARGETS...` are one or more collections found at the instance URL.  (e.g. `DefaultCollection`, `Corp`, etc).  Service hooks are applied to each project
-found in the specified collection.
+  --level LOGLEVEL    Log level [default: INFO]
+                      Use: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-Projects can be omitted by using the `--skip-regex` option or limited to certain projects
-by using the `--match-regex` option.
+  --log-file LOGFILE  A file where logs are written.
+
+  -q                  Do not output logs to the console.
+
+
+  Runtime Options
+
+  -t THREADS         The number of concurrent SCM read/write operations. [Default: 4]
+
+  -k                 Ignore SSL verification failures. [Default: False]
+
+  --proxy PROXY_URL  A proxy server to use for communication.
+
+```
+
+The general options should be set before selecting the SCM to
+be used to execute the auditing function.  Help for execution of each
+function for a specific SCM can be displayed with the
+`cxoneflow-audit help <scm>` command.
+
+Each SCM supports the commands `audit`, `deploy`, `remove`, and `kickoff`.  As an example, the command "`cxoneflow-audit help adoe`"
+shows that further help is available with the command "`cxoneflow-audit help <scm> <command>`":
+
+```
+Usage: cxoneflow-audit adoe <command> [<args>...]
+
+    <command> can be one of:
+    audit       Execute an audit for CxOneFlow webhook deployment.
+
+    deploy      Deploy CxOneFlow webhooks on the projects in the specified collections.
+
+    remove      Remove CxOneFlow webhooks on the projects in the specified collections.
+
+    kickoff     Iterate through project repositories in the specified collection
+                and perform an initial scan on the default branch.
+
+    Use "cxoneflow-audit help adoe <command>" for further help.
+```
+
+## Audit Function
+
+### Azure DevOps
+
+Service hooks are deployed on each project in Azure DevOps.  The audit function
+will show the configuration status of each project in each collection
+provided in the `TARGETS...` parameter.
+
+Display the `audit` help with the command `cxoneflow-audit help adoe audit`:
+
+```
+Usage: cxoneflow-audit adoe audit [--no-config] [--outfile CSVFILE]
+                      [--match-regex M_REGEX | --skip-regex S_REGEX]
+                      (--pat PAT | --pat-env) (--scm-url URL)
+                      (--cx-url CX_URL) TARGETS...
+
+    TARGETS...                  One or more collection names where containing projects
+                                where service hook configurations will be audited.
+
+    Deployment Options
+
+    --cx-url CX_URL             The base URL for the CxOneFlow endpoint
+                                (e.g. https://cxoneflow.corp.com)
+
+
+    Output Options
+
+    --outfile CSVFILE          The path to a file where the audit CSV will be
+                               written. [default: ./cxoneflow.csv]
+
+    --no-config                Only include projects that are not configured
+                               or are partially configured.
+
+    Filtering Options
+
+    --match-regex M_REGEX      Regular expression that matches ADO projects that
+                               should be configured to send events to CxOneFlow.
+
+    --skip-regex S_REGEX       Regular expression that matches ADO projects that
+                               should not be configured to send events to CxOneFlow.
+
+    SCM Options
+
+    --pat PAT                  An SCM PAT with appropriate privileges.
+
+    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+
+    --scm-url URL              The URL to the SCM instance (e.g. https://dev.azure.com)
+```
+
+
+## Deploy Function
+
+### Azure DevOps
+
+The deploy function will create service hooks on each project found in
+each collection provided in the `TARGETS...` parameter.
+
+Display the `deploy` help with the command `cxoneflow-audit help adoe deploy`:
+
+```
+Usage: cxoneflow-audit adoe deploy [--match-regex M_REGEX | --skip-regex S_REGEX]
+                      (--shared-secret SECRET | --shared-secret-env) [--replace]
+                      (--pat PAT | --pat-env) (--scm-url URL)
+                      (--cx-url CX_URL) TARGETS...
+
+    TARGETS...                  One or more collection names where service hook
+                                configurations will be created on each project.
+
+    Deployment Options
+
+    --cx-url CX_URL             The base URL for the CxOneFlow endpoint
+                                (e.g. https://cxoneflow.corp.com)
+
+    --shared-secret SECRET     The shared secret configured in the service hook
+
+    --shared-secret-env        Obtain the shared secret from the environment variable 'CX_SECRET'
+
+    --replace                  If an existing webhook subscription is found, replace it.
+
+    Filtering Options
+
+    --match-regex M_REGEX      Regular expression that matches ADO projects that
+                               should be configured to send events to CxOneFlow.
+
+    --skip-regex S_REGEX       Regular expression that matches ADO projects that
+                               should not be configured to send events to CxOneFlow.
+
+    SCM Options
+
+    --pat PAT                  An SCM PAT with appropriate privileges.
+
+    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+
+    --scm-url URL              The URL to the SCM instance (e.g. https://dev.azure.com)
+```
+
+
+## Remove Function
+
+### Azure DevOps
+
+The remove function will remove service hooks on each project found in
+each collection provided in the `TARGETS...` parameter.
+
+Display the `remove` help with the command `cxoneflow-audit help adoe remove`:
+
+```
+Usage: cxoneflow-audit adoe remove [--match-regex M_REGEX | --skip-regex S_REGEX]
+                      (--pat PAT | --pat-env) (--scm-url URL)
+                      (--cx-url CX_URL) TARGETS...
+
+    TARGETS...                  One or more collection names where service hook
+                                configurations will be removed from each project.
+
+    Deployment Options
+
+    --cx-url CX_URL             The base URL for the CxOneFlow endpoint
+                                (e.g. https://cxoneflow.corp.com)
+
+    Filtering Options
+
+    --match-regex M_REGEX      Regular expression that matches ADO projects that
+                               should be configured to send events to CxOneFlow.
+
+    --skip-regex S_REGEX       Regular expression that matches ADO projects that
+                               should not be configured to send events to CxOneFlow.
+    SCM Options
+
+    --pat PAT                  An SCM PAT with appropriate privileges.
+
+    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+
+    --scm-url URL              The URL to the SCM instance (e.g. https://dev.azure.com)
+```
+
+## Kickoff Function
+
+### Azure DevOps
+
+The kickoff function will iterate repositories in each project found in
+each collection provided in the `TARGETS...` parameter.  A scan
+of the repository contents at the HEAD of the default branch will be
+performed if a scan for the repository does not already exist.
+
+Display the `kickoff` help with the command `cxoneflow-audit help adoe kickoff`:
+
+```
+Usage: cxoneflow-audit adoe kickoff [--match-regex M_REGEX | --skip-regex S_REGEX]
+                      (--pat PAT | --pat-env) (--scm-url URL) [--audit-file AUDIT_FILE]
+                      (--ssh-key-path SSHKEY) [--ssh-key-pass SSHPASS | --ssh-key-env]
+                      (--cx-url CX_URL) TARGETS...
+
+    TARGETS...                  One or more collection names containing projects
+                                for which all repositories will be scanned.
+
+    Deployment Options
+
+    --cx-url CX_URL             The base URL for the CxOneFlow endpoint
+                                (e.g. https://cxoneflow.corp.com)
+
+    --audit-file AUDIT_FILE     A path to a file where audit data about the
+                                started scans is written. Data is appended
+                                to the file if it exists. [Default: kickoff_audit.csv]
+
+    --ssh-key-path SSHKEY       The path to a file containing a PEM encoded
+                                SSH private key for authenticating with the
+                                CxOneFlow kickoff API
+
+    --ssh-key-pass SSHPASS      The password to the SSH private key if it is
+                                password protected.
+
+    --ssh-key-env               Indicates that the SSH key password should be
+                                obtained from the environment variable CX_SSHPASS.
+
+    Filtering Options
+
+    --match-regex M_REGEX      Regular expression that matches ADO projects that
+                               should be configured to send events to CxOneFlow.
+
+    --skip-regex S_REGEX       Regular expression that matches ADO projects that
+                               should not be configured to send events to CxOneFlow.
+
+    SCM Options
+
+    --pat PAT                  An SCM PAT with appropriate privileges.
+
+    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+
+    --scm-url URL              The URL to the SCM instance (e.g. https://dev.azure.com)
+```
 
 ## SCM Specific Information
 
 ### Azure DevOps
 
 Modifying and reading service hook settings is an administrative function.  The user that owns the PAT
-must be in the `Project Collection Administrators` group.
+for executing the `audit`, `deploy`, and `remove` functions must be in the
+`Project Collection Administrators` group.
 
-The PAT used when invoking `cxoneflow-audit` must have these minimum permissions:
+The PAT used for the `kickoff` function should be from
+a user that has the ability to read all repositories.  The privilege requirements for the PAT
+used by the CxOneFlow endpoint will be identical to the privileges needed to perform
+the kickoff scans.  It is not recommended to use the same PAT as is used by the CxOneFlow
+endpoint when executing the kickoff function with `cxoneflow-audit`.
+
+The PAT used when invoking `cxoneflow-audit` for service hook deployments/updates must have these minimum permissions:
 
 * Build::Read
 * Code::Read
@@ -157,11 +348,10 @@ with the following collections defined:
 An example command line to perform the audit function would be similar to:
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe audit --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
-  --audit \
-  ado DefaultCollection EastCoast WestCoast
+  DefaultCollection EastCoast WestCoast
 ```
 
 The default output file `./cxoneflow.csv` would be generated containing the
@@ -172,12 +362,11 @@ A similar example that limits the audit to projects found in the specified colle
 that begin with either "New York" or "Los Angeles":
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe audit --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
   --match-regex '^New.York|^Los.Angeles' \
-  --audit \
-  ado DefaultCollection EastCoast WestCoast
+  DefaultCollection EastCoast WestCoast
 ```
 
 Note the single-quotes surrounding the regular expression.
@@ -186,12 +375,11 @@ This example is similar but will only audit projects that
 *do not* begin with "New York" or "Los Angeles":
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe audit --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
   --skip-regex '^New.York|^Los.Angeles' \
-  --audit
-  ado DefaultCollection EastCoast WestCoast
+  DefaultCollection EastCoast WestCoast
 ```
 
 #### Deployment Example
@@ -200,23 +388,23 @@ To deploy service hook configurations that point to the [CxOneFlow](https://gith
 the command line would be similar to the following example:
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe deploy --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
-  --deploy --shared-secret <secret> \
-  ado DefaultCollection EastCoast WestCoast
+  --shared-secret <secret> \
+  DefaultCollection EastCoast WestCoast
 ```
 
 In the below example, the service hooks would be deployed only to projects
 beginning with "New York" or "Los Angeles":
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe deploy --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
   --match-regex '^New.York|^Los.Angeles' \
-  --deploy --shared-secret <secret> \
-  ado DefaultCollection EastCoast WestCoast
+  --shared-secret <secret> \
+  DefaultCollection EastCoast WestCoast
 ```
 
 Note the single-quotes surrounding the regular expression.
@@ -225,12 +413,12 @@ The example below is similar but will only deploy service hooks to projects that
 *do not* begin with "New York" or "Los Angeles":
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe audit --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
   --skip-regex '^New.York|^Los.Angeles' \
-  --deploy --shared-secret <secret> \
-  ado DefaultCollection EastCoast WestCoast
+  --shared-secret <secret> \
+  DefaultCollection EastCoast WestCoast
 ```
 
 #### Remove Example
@@ -239,23 +427,21 @@ To remove **all** service hook configurations that point to the [CxOneFlow](http
 the command line would be similar to the following example:
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe remove --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
-  --remove
-  ado DefaultCollection EastCoast WestCoast
+  DefaultCollection EastCoast WestCoast
 ```
 
 In the below example, the service hooks would be removed only from projects
 beginning with "New York" or "Los Angeles":
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe remove --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
   --match-regex '^New.York|^Los.Angeles' \
-  --remove
-  ado DefaultCollection EastCoast WestCoast
+  DefaultCollection EastCoast WestCoast
 ```
 
 Note the single-quotes surrounding the regular expression.
@@ -264,12 +450,11 @@ The example below is similar but will only remove service hooks from projects th
 *do not* begin with "New York" or "Los Angeles":
 
 ```
-cxoneflow-audit --cx-url https://cxoneflow.corp.com \
+cxoneflow-audit adoe remove --cx-url https://cxoneflow.corp.com \
   --pat <your PAT> \
   --scm-url https://ado.corp.com \
   --skip-regex '^New.York|^Los.Angeles' \
-  --remove \
-  ado DefaultCollection EastCoast WestCoast
+  DefaultCollection EastCoast WestCoast
 ```
 
 
@@ -280,7 +465,8 @@ cxoneflow-audit --cx-url https://cxoneflow.corp.com \
 #### Turn on Debug
 
 The first troubleshooting step is to turn on debug logging.
-Use the `--level DEBUG` option to turn on debug output.  Capture the debug log if it is necessary to request help from Checkmarx Professional Solutions.
+Use the `--level DEBUG` option to turn on debug output.  Capture the debug log if it is necessary to request help from
+Checkmarx Professional Services.
 
 #### Multiple scans executing on push/pull-request events
 
@@ -290,7 +476,7 @@ events, it is possible that the events are being emitted more than once.
 
 To resolve the issue, remove all webhook event configurations made at the repository level.
 
-#### Some, but not all, of the webhook events are rejected by CxOneFlow.
+#### Some, but not all, of the webhook events are rejected by CxOneFlow
 
 The shared secret that is configured with some webhook configurations may be wrong
 or outdated.  Use the `cxoneflow-audit` deploy function with the `--replace` option 
@@ -298,11 +484,10 @@ to force the webhook definitions to be updated with the current shared secret.
 
 ### Azure DevOps
 
-#### The audit CSV shows nothing is configured but service hook configurations can be observed.
+#### The audit CSV shows nothing is configured but service hook configurations can be observed
 
 Check the following:
 
 * The user that owns the PAT is in the `Project Collection Administrators` group for each target collection.
 * The PAT has appropriate permissions as specified in [Azure DevOps](#azure-devops).
 * The [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) URL is the base URL for the [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) endpoint (e.g. without the `/adoe` route at the end)
-
