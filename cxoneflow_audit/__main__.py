@@ -1,12 +1,14 @@
-import asyncio, logging, os
+import asyncio
+import logging
+import os
+import requests
 from asyncio import Semaphore
 from docopt import docopt, DocoptExit
 from cxoneflow_audit.__version__ import __version__, PROGNAME
 from cxoneflow_audit.log import bootstrap
-from cxoneflow_audit.util import NameMatcher
 from cxoneflow_audit.scm.ado import AdoTool
+from cxoneflow_audit.scm.gh import GithubTool
 
-import requests
 # pylint: disable=E1101
 requests.packages.urllib3.disable_warnings()
 
@@ -86,6 +88,7 @@ async def main():
 
     main_map = {
       "adoe" : AdoTool(**(common_args(args))),
+      "gh" : GithubTool(**(common_args(args))),
     }
 
     scm = args['<scm>']
