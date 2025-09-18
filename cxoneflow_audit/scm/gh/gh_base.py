@@ -150,7 +150,7 @@ class GithubBase:
     return self.__api_generator(self.__api_call, f"/orgs/{org_name}/hooks")
 
   async def _organization_iterator(self) -> AsyncGenerator[Dict, None]:
-    return self.__api_generator(self.__api_call, "/organizations", 
+    return self.__api_generator(self.__api_call, "/organizations",
                                 page_by_count = False, page_param="since",
                                 next_page_calc=lambda _, data : data['id'])
 

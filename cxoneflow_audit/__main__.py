@@ -1,8 +1,8 @@
 import asyncio
+from asyncio import Semaphore
 import logging
 import os
 import requests
-from asyncio import Semaphore
 from docopt import docopt, DocoptExit
 from cxoneflow_audit.__version__ import __version__, PROGNAME
 from cxoneflow_audit.log import bootstrap
@@ -69,16 +69,16 @@ async def main():
   --proxy PROXY_URL  A proxy server to use for communication.
   
   """
-                          
+
   can_log = False
-  
+
   try:
 
     args = docopt(main.__doc__, version=PROGNAME, options_first = True)
 
-    bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'], 
+    bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'],
               not args['-q'], args['--log-file'])
-    
+
     _log = logging.getLogger("main")
     can_log = True
     _log.info(PROGNAME)
@@ -135,4 +135,3 @@ if __name__ == "__main__":
 
 def cli_entry():
   asyncio.run(main())
-

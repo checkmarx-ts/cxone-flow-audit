@@ -20,7 +20,7 @@ class GithubAuditor(Auditor, GithubBase):
   @property
   def _scm_name(self) -> str:
     return "GitHub"
-  
+
   def _get_lu_name(self, lu : Any) -> str:
     return lu['login']
 
@@ -35,12 +35,12 @@ class GithubAuditor(Auditor, GithubBase):
   def __eval_correct_permissions(perms : Dict[str, str]) -> bool:
     return "contents" in perms.keys() and perms["contents"] == "read" \
       and "pull_requests" in perms.keys() and perms["pull_requests"] == "write"
-  
+
 
   @staticmethod
   def __eval_correct_events(events : List[str]) -> bool:
     return "pull_request" in events and "push" in events and "pull_request_review" in events
-  
+
   def __eval_correct_webhook_url(self, url : str) -> bool:
     return url.startswith(self.webhook_url)
 
@@ -136,7 +136,7 @@ class GithubAuditor(Auditor, GithubBase):
 
     result = await super().execute()
 
-    with open(self.outfile, "wt") as csv_dest:
+    with open(self.outfile, "wt", encoding="UTF-8") as csv_dest:
       writer = csv.writer(csv_dest, lineterminator="\n", quoting=csv.QUOTE_ALL)
       # pylint: disable=E1101
       sorted_fields = sorted(list(HookData.__dataclass_fields__.keys()))
