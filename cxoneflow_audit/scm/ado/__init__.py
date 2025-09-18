@@ -53,7 +53,7 @@ class AdoTool(SCMTool):
     """
     args = self._get_opts(self.ado_audit.__doc__, ["adoe", "audit"] + ado_args, help)
 
-    return await AdoAuditor(args['--outfile'], args['--no-config'], targets=args['TARGETS'],
+    return await AdoAuditor(outfile=args['--outfile'], only_not_cfg=args['--no-config'], targets=args['TARGETS'],
                             concurrency=self.concurrency, proxy=self.proxy,
                             ignore_ssl_errors=self.ssl_ignore,
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
