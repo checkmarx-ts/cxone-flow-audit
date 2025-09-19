@@ -14,16 +14,17 @@ class HookData:
   _orgId : int
   _orgUrl : str
   hasOrgWebhook : bool = False
-  orgWebhookActive : bool = False
+  orgWebhookActive : bool = None
   orgWebhookCreatedAt : str = None
   orgWebhookUpdatedAt : str = None
   orgWebhookConfigUrl : str = None
-  orgWebhookPushEvents : bool = False
-  orgWebhookPREvents : bool = False
-  hasGithubApp : bool = None
-  pendingGithubAppApproval : bool = None
-  pendingRequestDate : str = None
-  pendingRequester : str = None
+  orgWebhookPushEvents : bool = None
+  orgWebhookPREvents : bool = None
+  orgWebhookJsonContentType : bool = None
+  hasGithubApp : bool = False
+  githubAppPendingApproval : bool = None
+  githubAppPendingRequestDate : str = None
+  githubAppPendingRequester : str = None
   githhubAppCreatedAt : str = None
   githubAppUpdatedAt : str = None
   githubAppId : str = None
@@ -60,13 +61,20 @@ class GithubBase:
     self.__app_webhook = None
     self.__pending_install_orgs = None
 
-    with open(app_key_file, "rt", encoding="UTF-8") as k:
-      self.__private_key = k.read()
+    if app_key_file is not None:
+      with open(app_key_file, "rt", encoding="UTF-8") as k:
+        self.__private_key = k.read()
+    else:
+      self.__private_key = None
 
 
   @property
   def webhook_url(self) -> str:
     return self.__webhook_url
+  
+  @property
+  def check_for_app(self) -> bool:
+    return not self.__private_key is None
 
   def __required_pat_headers(self) -> Dict:
     return {
@@ -155,6 +163,9 @@ class GithubBase:
                                 next_page_calc=lambda _, data : data['id'])
 
   async def _get_app_pending_install(self, org : str) -> Union[PendingInstallData, None]:
+    if not self.check_for_app:
+      return None
+
     async with self.__general_lock:
       if self.__pending_install_orgs is None:
         self.__pending_install_orgs = {}
@@ -167,6 +178,9 @@ class GithubBase:
 
   async def _get_app_webhook_endpoint(self) -> Union[str, None]:
 
+    if not self.check_for_app:
+      return None
+
     async with self.__general_lock:
       if self.__app_webhook is None:
         res = await self.__app_api_call("/app/hook/config")
@@ -178,6 +192,9 @@ class GithubBase:
     return self.__app_webhook
 
   async def _get_org_installed_app(self, org_name : str) -> Union[Dict, None]:
+    if not self.check_for_app:
+      return None
+    
     async for app in self.__api_generator(self.__api_call, f"/orgs/{org_name}/installations", iterate_element="installations"):
       if self.__app_slug is not None and app['app_slug'] == self.__app_slug.lower():
         return app
