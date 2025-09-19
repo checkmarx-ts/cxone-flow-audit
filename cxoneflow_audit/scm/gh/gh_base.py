@@ -67,14 +67,24 @@ class GithubBase:
     else:
       self.__private_key = None
 
+  @property
+  def _scm_name(self) -> str:
+    return "GitHub"
 
   @property
   def webhook_url(self) -> str:
     return self.__webhook_url
-  
+
+  @property
+  def read_app_config(self) -> bool:
+    return not self.__private_key is None
+
   @property
   def check_for_app(self) -> bool:
-    return not self.__private_key is None
+    return not self.__app_slug is None
+
+  def _eval_correct_webhook_url(self, url : str) -> bool:
+    return url.startswith(self.webhook_url)
 
   def __required_pat_headers(self) -> Dict:
     return {
@@ -82,7 +92,7 @@ class GithubBase:
       "User-Agent" : PROGNAME
       }
 
-  async def __app_api_call(self, api_path : str, query_args : Dict[str, str] = None) -> requests.Response:
+  async def __app_api_call(self, api_path : str, query_args : Dict[str, str] = None, method : str = "GET") -> requests.Response:
     async with self.__app_api_lock:
       if self.__app_id is None and self.__app_slug is not None:
         res = await self.__api_call(f"/apps/{self.__app_slug}")
@@ -106,17 +116,17 @@ class GithubBase:
 
     url = self.__scm_url + api_path.lstrip("/")
 
-    return await to_thread(requests.request, "GET", url, params=query_args,
+    return await to_thread(requests.request, method, url, params=query_args,
                      headers=headers, proxies=self.__proxies,
                      verify=not self.__ignore_ssl_errors)
 
-  async def __api_call(self, api_path : str, query_args : Dict[str, str] = None) -> requests.Response:
+  async def __api_call(self, api_path : str, query_args : Dict[str, str] = None, method : str = "GET", json_body : Dict = None) -> requests.Response:
 
     url = self.__scm_url + api_path.lstrip("/")
 
-    return await to_thread(requests.request, "GET", url, params=query_args,
+    return await to_thread(requests.request, method, url, params=query_args,
                      headers=self.__required_pat_headers(), proxies=self.__proxies,
-                     verify=not self.__ignore_ssl_errors)
+                     verify=not self.__ignore_ssl_errors, json=json_body)
 
 
   # pylint: disable=W0102
@@ -163,7 +173,7 @@ class GithubBase:
                                 next_page_calc=lambda _, data : data['id'])
 
   async def _get_app_pending_install(self, org : str) -> Union[PendingInstallData, None]:
-    if not self.check_for_app:
+    if not self.read_app_config:
       return None
 
     async with self.__general_lock:
@@ -178,7 +188,7 @@ class GithubBase:
 
   async def _get_app_webhook_endpoint(self) -> Union[str, None]:
 
-    if not self.check_for_app:
+    if not self.read_app_config:
       return None
 
     async with self.__general_lock:
@@ -192,9 +202,33 @@ class GithubBase:
     return self.__app_webhook
 
   async def _get_org_installed_app(self, org_name : str) -> Union[Dict, None]:
-    if not self.check_for_app:
-      return None
-    
     async for app in self.__api_generator(self.__api_call, f"/orgs/{org_name}/installations", iterate_element="installations"):
       if self.__app_slug is not None and app['app_slug'] == self.__app_slug.lower():
         return app
+      
+  def __make_hook_payload(self, shared_secret : str) -> Dict:
+     return {
+      "name" : "web",
+      "config" : {
+        "url" : self.webhook_url,
+        "secret" : shared_secret,
+        "content_type" : "json"
+      },
+      "events" : ["pull_request", "pull_request_review", "push"],
+      "active" : True
+    }
+
+  async def _create_webhook(self, org_name : str, shared_secret : str) -> bool:
+    return (await self.__api_call(f"/orgs/{org_name}/hooks", method="POST",
+                                  json_body=self.__make_hook_payload(shared_secret))).ok
+
+
+  async def _delete_webhook(self, org_name : str, hook_id : int) -> bool:
+    return (await self.__api_call(f"/orgs/{org_name}/hooks/{hook_id}", method="DELETE")).ok
+
+  async def _replace_webhook(self, org_name : str, shared_secret : str, hook_id : int) -> bool:
+    return (await self.__api_call(f"/orgs/{org_name}/hooks/{hook_id}", method="PATCH",
+                                  json_body=self.__make_hook_payload(shared_secret))).ok
+
+  async def _remove_app(self, install_id : int) -> bool:
+    return (await self.__app_api_call(f"/app/installations/{install_id}", method="DELETE")).ok

@@ -16,7 +16,6 @@ class GithubAuditor(Auditor, GithubBase):
     self.__data = {}
     self.__lock = Lock()
 
-
   @property
   def _scm_name(self) -> str:
     return "GitHub"
@@ -40,9 +39,6 @@ class GithubAuditor(Auditor, GithubBase):
   @staticmethod
   def __eval_correct_events(events : List[str]) -> bool:
     return "pull_request" in events and "push" in events and "pull_request_review" in events
-
-  def __eval_correct_webhook_url(self, url : str) -> bool:
-    return url.startswith(self.webhook_url)
 
   async def _process_lu(self, lu : Any) -> bool:
     self.log().debug(f"Processing: {self._get_lu_repr(lu)}")
@@ -68,7 +64,7 @@ class GithubAuditor(Auditor, GithubBase):
         if not hook_cfg.orgWebhookPushEvents or not hook_cfg.orgWebhookPREvents:
           current_state = ConfigState.PARTIAL_CONFIG
 
-      if self.check_for_app:
+      if self.read_app_config:
         # State should be NOT_CONFIGURED when an app is found. If app and webhooks
         # are found, state is MISCONFIG
         app = await self._get_org_installed_app(lu['login'])
@@ -77,7 +73,7 @@ class GithubAuditor(Auditor, GithubBase):
           if current_state != ConfigState.NOT_CONFIGURED:
             current_state = ConfigState.MISCONFIG
 
-          hook_cfg.githubAppCorrectWebhookUrl = self.__eval_correct_webhook_url(await self._get_app_webhook_endpoint())
+          hook_cfg.githubAppCorrectWebhookUrl = self._eval_correct_webhook_url(await self._get_app_webhook_endpoint())
 
           hook_cfg.githubAppSuspendedAt = app['suspended_at']
           hook_cfg.githubAppSuspendedBy = app['suspended_by']
