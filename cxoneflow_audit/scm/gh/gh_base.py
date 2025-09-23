@@ -132,20 +132,20 @@ class GithubBase:
   # pylint: disable=W0102
   async def __api_generator(self, coro : Coroutine, api_path : str, query_args : Dict[str, str] = {},
                             per_page : int = 100, page_param : str = "page", page_by_count : bool = True,
-                            initial_page_count_val : Any = 0,
+                            initial_page_count_val : Any = 1,
                             next_page_calc : Callable[[Any, Dict], Any] = None,
                             iterate_element : str = None) -> AsyncGenerator[Dict, None]:
     opt_dict = {"per_page" : per_page}
     opt_dict.update(query_args)
 
     while True:
-      res = await coro(api_path, opt_dict)
       if page_by_count:
         if page_param in opt_dict.keys():
           opt_dict[page_param] += 1
         else:
           opt_dict[page_param] = initial_page_count_val
 
+      res = await coro(api_path, opt_dict)
 
       if not res.ok and res.status_code != 404:
         raise ScmException(f"Status {res.status_code} attempting api call {api_path}.")
@@ -232,3 +232,21 @@ class GithubBase:
 
   async def _remove_app(self, install_id : int) -> bool:
     return (await self.__app_api_call(f"/app/installations/{install_id}", method="DELETE")).ok
+  
+  async def _repo_iterator(self, org_name : str) -> AsyncGenerator[Dict, None]:
+    async for repo in self.__api_generator(self.__api_call, f"/orgs/{org_name}/repos"):
+      yield repo
+
+  async def _get_latest_repo_commit(self, org_name : str, repo_name : str, branch_name : str) -> Union[str, None]:
+
+    data = await self.__api_call(f"/repos/{org_name}/{repo_name}/commits", {
+      "sha" : branch_name,
+      "per_page" : 1
+    })
+
+    if data.ok:
+      return data.json().pop()['sha']
+    else:
+      return None
+    
+
