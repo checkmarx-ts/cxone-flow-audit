@@ -3,7 +3,10 @@
 
 This is a command line tool that can be used to audit, configure, and de-configure [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) event web hooks in an SCM.
 
-This currently only works with Azure DevOps Cloud and Enterprise.
+This currently supports the following SCM types:
+
+* Azure DevOps Cloud and Enterprise
+* Github Cloud and Enterprise (self-hosted)
 
 ## Installation
 
