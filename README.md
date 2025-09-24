@@ -24,12 +24,12 @@ to obtain the URL of the latest release binary.
 
 `cxoneflow-audit` can perform the following functions for the supported SCMs:
 
-* Audit: This creates a CSV file showing configuration status for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
+* Audit: This creates a CSV file showing configuration status for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) integration configurations.
 * Deploy: Deploys required configurations for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
-* Remove: Removes deployed configurations for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) webhooks.
-* Kickoff: Iterates through repositories, invokes an initial scan via [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow).
+* Remove: Removes deployed configurations for [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow) integration configurations.
+* Kickoff: Iterates through repositories, invokes an initial scan of the default branch via [CxOneFlow](https://github.com/checkmarx-ts/cxone-flow).
 
-The functions work with each SCM differently depending on how the SCM organizes repositories.
+The functions work with each SCM differently depending on repository toplogy and integration options.
 
 ### Kickoff
 
