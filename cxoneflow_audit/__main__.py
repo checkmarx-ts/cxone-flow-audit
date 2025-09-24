@@ -37,7 +37,7 @@ async def main():
   
   <scm> can be one of:
   adoe                Commands for Azure DevOps
-  gh                  Commands for GitHub
+  gh                  Commands for Github
   gl                  Commands for Gitlab
   bbdc                Commands for BitBucket Data Center
 
