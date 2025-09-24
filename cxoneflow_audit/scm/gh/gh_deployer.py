@@ -12,7 +12,7 @@ class GithubDeployer(Deployer, GithubBase):
                         app_slug, None)
   @property
   def _scm_name(self) -> str:
-    return "GitHub"
+    return "Github"
 
   def _get_lu_name(self, lu : Any) -> str:
     return lu['login']
@@ -32,7 +32,7 @@ class GithubDeployer(Deployer, GithubBase):
 
       try:
         if await self._get_org_installed_app(org_name) is not None:
-          self.log().warning("The GitHub app is installed in organization %s, skipping webhook deployment.", org_name)
+          self.log().warning("The Github app is installed in organization %s, skipping webhook deployment.", org_name)
           return False
       except GithubBase.NotFoundException:
         self.log().warning("PAT permissions don't allow app configuration enumeration for organization %s.", org_name)

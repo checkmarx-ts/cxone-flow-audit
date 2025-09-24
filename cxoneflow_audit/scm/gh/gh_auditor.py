@@ -18,7 +18,7 @@ class GithubAuditor(Auditor, GithubBase):
 
   @property
   def _scm_name(self) -> str:
-    return "GitHub"
+    return "Github"
 
   def _get_lu_name(self, lu : Any) -> str:
     return lu['login']
@@ -71,7 +71,7 @@ class GithubAuditor(Auditor, GithubBase):
         can_read_hook_state = False
 
 
-      if self.read_app_config:
+      if self.check_for_app:
         # State should be NOT_CONFIGURED when an app is found. If app and webhooks
         # are found, state is MISCONFIG
         try:
@@ -85,7 +85,17 @@ class GithubAuditor(Auditor, GithubBase):
           if current_state != ConfigState.NOT_CONFIGURED:
             current_state = ConfigState.MISCONFIG
 
-          hook_cfg.githubAppCorrectWebhookUrl = self._eval_correct_webhook_url(await self._get_app_webhook_endpoint())
+          if self.read_app_config:
+            hook_cfg.githubAppCorrectWebhookUrl = self._eval_correct_webhook_url(await self._get_app_webhook_endpoint())
+            hook_cfg.githubAppCorrectPermissions = GithubAuditor.__eval_correct_permissions(app['permissions'])
+            if not hook_cfg.githubAppCorrectPermissions and current_state != ConfigState.MISCONFIG:
+              current_state = ConfigState.PARTIAL_CONFIG
+
+            hook_cfg.githubAppCorrectEvents = GithubAuditor.__eval_correct_events(app['events'])
+            if not hook_cfg.githubAppCorrectEvents and current_state != ConfigState.MISCONFIG:
+              current_state = ConfigState.PARTIAL_CONFIG
+          elif current_state == ConfigState.NOT_CONFIGURED:
+            current_state = ConfigState.UNKNOWN
 
           hook_cfg.githubAppSuspendedAt = app['suspended_at']
           hook_cfg.githubAppSuspendedBy = app['suspended_by']
@@ -107,13 +117,6 @@ class GithubAuditor(Auditor, GithubBase):
           if not hook_cfg.githubAppAllRepos and current_state != ConfigState.MISCONFIG:
             current_state = ConfigState.PARTIAL_CONFIG
 
-          hook_cfg.githubAppCorrectPermissions = GithubAuditor.__eval_correct_permissions(app['permissions'])
-          if not hook_cfg.githubAppCorrectPermissions and current_state != ConfigState.MISCONFIG:
-            current_state = ConfigState.PARTIAL_CONFIG
-
-          hook_cfg.githubAppCorrectEvents = GithubAuditor.__eval_correct_events(app['events'])
-          if not hook_cfg.githubAppCorrectEvents and current_state != ConfigState.MISCONFIG:
-            current_state = ConfigState.PARTIAL_CONFIG
         else:
           pending_data = await self._get_app_pending_install(lu['login'])
           hook_cfg.githubAppPendingApproval = pending_data is not None

@@ -13,7 +13,7 @@ class GithubRemover(Remover, GithubBase):
 
   @property
   def _scm_name(self) -> str:
-    return "GitHub"
+    return "Github"
 
   def _get_lu_name(self, lu : Any) -> str:
     return lu['login']
@@ -42,10 +42,10 @@ class GithubRemover(Remover, GithubBase):
       if app is not None:
         install_id = app['id']
         if await self._remove_app(install_id):
-          self.log().info("GitHub app with installation id %d removed from organization %s", install_id, org_name)
+          self.log().info("Github app with installation id %d removed from organization %s", install_id, org_name)
           noAction = False
         else:
-          self.log().warning("Could not remove GitHub app with installation id %d from organization %s", install_id, org_name)
+          self.log().warning("Could not remove Github app with installation id %d from organization %s", install_id, org_name)
           appRemoved = False
 
     hookRemoved = True

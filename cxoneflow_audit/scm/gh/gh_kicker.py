@@ -13,7 +13,7 @@ class GithubKicker(Kicker, GithubBase):
 
   @property
   def _scm_name(self) -> str:
-    return "GitHub"
+    return "Github"
 
   @property
   def scm_key(self) -> str:
@@ -34,10 +34,14 @@ class GithubKicker(Kicker, GithubBase):
 
     app_id = None
     install_id = None
-    installed_app = await self._get_org_installed_app(org_name)
-    if installed_app is not None:
-      app_id = installed_app['app_id']
-      install_id = installed_app['id']
+    if self.check_for_app:
+      try:
+        installed_app = await self._get_org_installed_app(org_name)
+        if installed_app is not None:
+          app_id = installed_app['app_id']
+          install_id = installed_app['id']
+      except GithubBase.NotFoundException:
+        self.log().warning("App information for organization %s not found. Scans will be attempted but may fail without the app install id.", org_name)
 
     async for repo in self._repo_iterator(org_name):
       await self._exec_kickoff(repo['clone_url'],

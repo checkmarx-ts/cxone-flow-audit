@@ -72,7 +72,7 @@ class GithubBase:
 
   @property
   def _scm_name(self) -> str:
-    return "GitHub"
+    return "Github"
 
   @property
   def webhook_url(self) -> str:
@@ -208,7 +208,7 @@ class GithubBase:
     async for app in self.__api_generator(self.__api_call, f"/orgs/{org_name}/installations", iterate_element="installations"):
       if self.__app_slug is not None and app['app_slug'] == self.__app_slug.lower():
         return app
-      
+  
   def __make_hook_payload(self, shared_secret : str) -> Dict:
      return {
       "name" : "web",
