@@ -45,29 +45,41 @@ class GithubAuditor(Auditor, GithubBase):
 
     hook_cfg = HookData(_orgName=lu['login'], _orgId=lu['id'], _orgUrl=lu['url'])
     current_state = ConfigState.NOT_CONFIGURED
+    can_read_app_state = True
+    can_read_hook_state = True
 
     try:
-      async for hook in await self._organization_hooks_iterator(lu['login']):
-        if not hook['config']['url'].startswith(self.webhook_url):
-          continue
-        else:
-          current_state = ConfigState.CONFIGURED
+      try:
+        async for hook in await self._organization_hooks_iterator(lu['login']):
+          if not hook['config']['url'].startswith(self.webhook_url):
+            continue
+          else:
+            current_state = ConfigState.CONFIGURED
 
-        hook_cfg.hasOrgWebhook = True
-        hook_cfg.orgWebhookActive = hook['active']
-        hook_cfg.orgWebhookCreatedAt = hook['created_at']
-        hook_cfg.orgWebhookUpdatedAt = hook['updated_at']
-        hook_cfg.orgWebhookConfigUrl = hook['url']
-        hook_cfg.orgWebhookPushEvents = 'push' in hook['events'] or '*' in hook['events']
-        hook_cfg.orgWebhookPREvents = 'pull_request' in hook['events'] or '*' in hook['events']
-        hook_cfg.orgWebhookJsonContentType =  hook['config']['content_type'] == 'json'
-        if not hook_cfg.orgWebhookPushEvents or not hook_cfg.orgWebhookPREvents:
-          current_state = ConfigState.PARTIAL_CONFIG
+          hook_cfg.hasOrgWebhook = True
+          hook_cfg.orgWebhookActive = hook['active']
+          hook_cfg.orgWebhookCreatedAt = hook['created_at']
+          hook_cfg.orgWebhookUpdatedAt = hook['updated_at']
+          hook_cfg.orgWebhookConfigUrl = hook['url']
+          hook_cfg.orgWebhookPushEvents = 'push' in hook['events'] or '*' in hook['events']
+          hook_cfg.orgWebhookPREvents = 'pull_request' in hook['events'] or '*' in hook['events']
+          hook_cfg.orgWebhookJsonContentType =  hook['config']['content_type'] == 'json'
+          if not hook_cfg.orgWebhookPushEvents or not hook_cfg.orgWebhookPREvents:
+            current_state = ConfigState.PARTIAL_CONFIG
+      except GithubBase.NotFoundException:
+        self.log().warning("PAT permissions don't allow webhook configuration enumeration for organization %s.", lu['login'])
+        can_read_hook_state = False
+
 
       if self.read_app_config:
         # State should be NOT_CONFIGURED when an app is found. If app and webhooks
         # are found, state is MISCONFIG
-        app = await self._get_org_installed_app(lu['login'])
+        try:
+          app = await self._get_org_installed_app(lu['login'])
+        except GithubBase.NotFoundException:
+          can_read_app_state = False
+          app = None
+          self.log().warning("PAT permissions don't allow app configuration enumeration for organization %s.", lu['login'])
 
         if app is not None:
           if current_state != ConfigState.NOT_CONFIGURED:
@@ -108,17 +120,15 @@ class GithubAuditor(Auditor, GithubBase):
 
           if hook_cfg.githubAppPendingApproval and current_state == ConfigState.NOT_CONFIGURED:
             current_state = ConfigState.PARTIAL_CONFIG
-          elif not hook_cfg.githubAppPendingApproval and current_state == ConfigState.NOT_CONFIGURED:
-            current_state = ConfigState.UNKNOWN
 
           if hook_cfg.githubAppPendingApproval:
             hook_cfg.hasGithubApp = False
             hook_cfg.githubAppPendingRequestDate = pending_data.requestDate
             hook_cfg.githubAppPendingRequester = pending_data.requester
 
-        if not hook_cfg.githubAppPendingApproval and not hook_cfg.hasGithubApp and not hook_cfg.hasOrgWebhook:
-          current_state = ConfigState.NOT_CONFIGURED
-          self.log().warning("The GitHub app configuration for organization %s can't be fully determined. This may be due to PAT permissions.", lu['login'])
+
+      if not (can_read_app_state and can_read_hook_state):
+        current_state = ConfigState.UNKNOWN
 
       async with self.__lock:
         if current_state in self.__data.keys():

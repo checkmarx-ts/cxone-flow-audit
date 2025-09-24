@@ -33,7 +33,12 @@ class GithubRemover(Remover, GithubBase):
     appRemoved = self.check_for_app
 
     if self.check_for_app:
-      app = await self._get_org_installed_app(org_name)
+      try:
+        app = await self._get_org_installed_app(org_name)
+      except GithubBase.NotFoundException:
+        self.log().warning("PAT permissions don't allow app configuration enumeration for organization %s.", org_name)
+        app = None
+      
       if app is not None:
         install_id = app['id']
         if await self._remove_app(install_id):
@@ -44,14 +49,18 @@ class GithubRemover(Remover, GithubBase):
           appRemoved = False
 
     hookRemoved = True
-    async for hook in await self._organization_hooks_iterator(org_name):
-      if self._eval_correct_webhook_url(hook['config']['url']):
-        if await self._delete_webhook(org_name, hook['id']):
-          self.log().info("Webhook configuration removed from organization %s", org_name)
-          noAction = False
-        else:
-          self.log().warning("Could not remove webhook configuration from organization %s", org_name)
-          hookRemoved = False
+    try:
+      async for hook in await self._organization_hooks_iterator(org_name):
+        if self._eval_correct_webhook_url(hook['config']['url']):
+          if await self._delete_webhook(org_name, hook['id']):
+            self.log().info("Webhook configuration removed from organization %s", org_name)
+            noAction = False
+          else:
+            self.log().warning("Could not remove webhook configuration from organization %s", org_name)
+            hookRemoved = False
+    except GithubBase.NotFoundException:
+        self.log().warning("PAT permissions don't allow webhook configuration enumeration for organization %s.", org_name)
+
 
     if noAction:
       self.log().warning("No actions performed for organization %s", org_name)

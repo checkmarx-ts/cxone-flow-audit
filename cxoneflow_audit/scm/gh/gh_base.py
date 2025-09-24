@@ -47,6 +47,9 @@ class PendingInstallData:
 
 
 class GithubBase:
+
+  class NotFoundException(Exception):...
+
   def __init__(self, cxone_flow_url : str, scm_url : str, pat : str, proxy : Dict, ignore_ssl_errors : bool,
                app_slug : str, app_key_file : str):
     self.__scm_url = scm_url.rstrip("/") + "/"
@@ -150,7 +153,7 @@ class GithubBase:
       if not res.ok and res.status_code != 404:
         raise ScmException(f"Status {res.status_code} attempting api call {api_path}.")
       elif res.status_code == 404:
-        break
+        raise GithubBase.NotFoundException(api_path)
       else:
         element = res.json() if iterate_element is None else res.json()[iterate_element]
 

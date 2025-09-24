@@ -29,15 +29,23 @@ class GithubDeployer(Deployer, GithubBase):
     org_name = lu['login']
 
     if self.check_for_app:
-      if await self._get_org_installed_app(org_name) is not None:
-        self.log().warning("The GitHub app is installed in organization %s, skipping webhook deployment.", org_name)
-        return False
+
+      try:
+        if await self._get_org_installed_app(org_name) is not None:
+          self.log().warning("The GitHub app is installed in organization %s, skipping webhook deployment.", org_name)
+          return False
+      except GithubBase.NotFoundException:
+        self.log().warning("PAT permissions don't allow app configuration enumeration for organization %s.", org_name)
 
     existing_def = None
-    async for hook in await self._organization_hooks_iterator(org_name):
-      if self._eval_correct_webhook_url(hook['config']['url']):
-        existing_def = hook
-        break
+    try:
+      async for hook in await self._organization_hooks_iterator(org_name):
+        if self._eval_correct_webhook_url(hook['config']['url']):
+          existing_def = hook
+          break
+    except GithubBase.NotFoundException:
+      self.log().warning("PAT permissions don't allow webhook configuration enumeration for organization %s.", org_name)
+      return False
 
     if existing_def is not None and not self.replace:
       self.log().warning("Existing webhook configuration found in organization %s, no changes made.", org_name)
