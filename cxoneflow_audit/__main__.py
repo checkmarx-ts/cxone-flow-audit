@@ -3,6 +3,7 @@ from asyncio import Semaphore
 import logging
 import os
 import requests
+import sys
 from docopt import docopt, DocoptExit
 from cxoneflow_audit.__version__ import __version__, PROGNAME
 from cxoneflow_audit.log import bootstrap
@@ -110,17 +111,17 @@ async def main():
 
     _log.debug(f"{PROGNAME} END with exit code {result}")
 
-    exit (result)
+    sys.exit (result)
   except DocoptExit as bad_args:
     print("Incorrect arguments provided.")
     print(bad_args)
-    exit(1)
+    sys.exit(1)
   except NotImplementedError as ni:
     if can_log:
       _log.exception(ni)
     else:
       print(f"Not implemented: {ni}")
-    exit(1)
+    sys.exit(1)
   except SystemExit:
     pass
   except BaseException as ex:
@@ -128,7 +129,7 @@ async def main():
       _log.exception(ex)
     else:
       print(ex)
-    exit(1)
+    sys.exit(1)
 
 if __name__ == "__main__":
   asyncio.run(main())

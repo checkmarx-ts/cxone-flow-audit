@@ -53,3 +53,5 @@ class GithubKicker(Kicker, GithubBase):
           repo_name=repo['name'],
           install_id=install_id,
           app_id=app_id))
+
+    return True

@@ -142,7 +142,9 @@ class GithubAuditor(Auditor, GithubBase):
     except ScmException as ex:
       current_state = ConfigState.UNKNOWN
       self.log().error(ex)
+      return False
 
+    return True
 
   async def execute(self) -> int:
 

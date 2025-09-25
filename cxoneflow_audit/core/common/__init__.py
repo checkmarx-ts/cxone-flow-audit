@@ -75,6 +75,7 @@ class Operation:
         return await self._process_lu(lu)
       else:
         self.log().info(f"LU skipped due to match rules: {self._get_lu_repr(lu)}")
+        return True
 
   async def _process_lu(self, lu : Any) -> bool:
     raise NotImplementedError("_process_lu")
