@@ -13,6 +13,7 @@ class ConfigState(Enum):
   PARTIAL_CONFIG = "Partially Configured"
   NOT_CONFIGURED = "Not Configured"
   UNKNOWN = "Unknown"
+  MISCONFIG = "Misconfigured"
 
 class Operation:
 
@@ -60,7 +61,7 @@ class Operation:
     raise NotImplementedError("_scm_name")
   
   def _get_lu_name(self, lu : Any) -> str:
-    raise NotImplementedError("_get_match_part_of_lu")
+    raise NotImplementedError("_get_lu_name")
 
   def _get_lu_repr(self, lu : Any) -> str:
     raise NotImplementedError("_get_lu_repr")
@@ -74,6 +75,7 @@ class Operation:
         return await self._process_lu(lu)
       else:
         self.log().info(f"LU skipped due to match rules: {self._get_lu_repr(lu)}")
+        return True
 
   async def _process_lu(self, lu : Any) -> bool:
     raise NotImplementedError("_process_lu")

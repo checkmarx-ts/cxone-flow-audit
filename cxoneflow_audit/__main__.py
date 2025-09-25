@@ -1,12 +1,15 @@
-import asyncio, logging, os
+import asyncio
 from asyncio import Semaphore
+import logging
+import os
+import requests
+import sys
 from docopt import docopt, DocoptExit
 from cxoneflow_audit.__version__ import __version__, PROGNAME
 from cxoneflow_audit.log import bootstrap
-from cxoneflow_audit.util import NameMatcher
 from cxoneflow_audit.scm.ado import AdoTool
+from cxoneflow_audit.scm.gh import GithubTool
 
-import requests
 # pylint: disable=E1101
 requests.packages.urllib3.disable_warnings()
 
@@ -35,7 +38,7 @@ async def main():
   
   <scm> can be one of:
   adoe                Commands for Azure DevOps
-  gh                  Commands for GitHub
+  gh                  Commands for Github
   gl                  Commands for Gitlab
   bbdc                Commands for BitBucket Data Center
 
@@ -67,16 +70,16 @@ async def main():
   --proxy PROXY_URL  A proxy server to use for communication.
   
   """
-                          
+
   can_log = False
-  
+
   try:
 
     args = docopt(main.__doc__, version=PROGNAME, options_first = True)
 
-    bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'], 
+    bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'],
               not args['-q'], args['--log-file'])
-    
+
     _log = logging.getLogger("main")
     can_log = True
     _log.info(PROGNAME)
@@ -86,6 +89,7 @@ async def main():
 
     main_map = {
       "adoe" : AdoTool(**(common_args(args))),
+      "gh" : GithubTool(**(common_args(args))),
     }
 
     scm = args['<scm>']
@@ -107,17 +111,17 @@ async def main():
 
     _log.debug(f"{PROGNAME} END with exit code {result}")
 
-    exit (result)
+    sys.exit (result)
   except DocoptExit as bad_args:
     print("Incorrect arguments provided.")
     print(bad_args)
-    exit(1)
+    sys.exit(1)
   except NotImplementedError as ni:
     if can_log:
       _log.exception(ni)
     else:
       print(f"Not implemented: {ni}")
-    exit(1)
+    sys.exit(1)
   except SystemExit:
     pass
   except BaseException as ex:
@@ -125,11 +129,10 @@ async def main():
       _log.exception(ex)
     else:
       print(ex)
-    exit(1)
+    sys.exit(1)
 
 if __name__ == "__main__":
   asyncio.run(main())
 
 def cli_entry():
   asyncio.run(main())
-
