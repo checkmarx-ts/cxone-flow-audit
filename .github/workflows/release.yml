@@ -15,9 +15,12 @@ on:
         required: true
         type: boolean
 
+permissions:
+  contents: read
+
 jobs:
   make-tag-string:
-    runs-on: ubuntu-latest
+    runs-on: cx-public-ubuntu-x64
     outputs:
       tag: ${{ steps.tag-string.outputs.tag }}
     steps:
@@ -28,7 +31,7 @@ jobs:
         id: tag-string
 
   validate-no-tag:
-    runs-on: ubuntu-latest
+    runs-on: cx-public-ubuntu-x64
     needs: [make-tag-string]
     steps:
       - name: Fetch Code
@@ -42,7 +45,7 @@ jobs:
           [[ $(git describe --tags) ==  ${{ needs.make-tag-string.outputs.tag }} ]] && exit 1 || :
 
   create-tag:
-    runs-on: ubuntu-latest
+    runs-on: cx-public-ubuntu-x64
     needs: [make-tag-string, validate-no-tag]
     outputs:
       done: ${{ steps.done_check.outputs.status }}
@@ -76,7 +79,7 @@ jobs:
 
   remove-tag-on-failure:
     needs: [make-tag-string, create-tag, publish-release]
-    runs-on: ubuntu-latest
+    runs-on: cx-public-ubuntu-x64
     permissions:
       contents: write
     if: ${{ failure() && needs.create-tag.outputs.done }}
