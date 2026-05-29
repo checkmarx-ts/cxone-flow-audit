@@ -61,7 +61,7 @@ jobs:
       - name: Create GitHub release
         if: ${{ ! inputs.buildonly }} 
         id: create_release
-        uses: ncipollo/release-action@2c591bcc8ecdcd2db72b97d6147f871fcd833ba5
+        uses: step-security/release-action@a0d8e0f90f554c15366ca2c9046bf4090d24adbe # v1.21.0
         with:
           allowUpdates: true
           artifactErrorsFailBuild: true
