@@ -9,10 +9,10 @@ dependencies = [
     "docopt==0.6.2",
     "aiofiles==24.1.0",
     "dataclasses-json==0.6.7",
-    "requests==2.32.4",
-    "jsonpath-ng==1.7.0",
-    "PyJWT==2.10.1",
-    "cxoneflow-kickoff-api@https://github.com/checkmarx-ts/cxone-flow/releases/download/2.1.5/cxoneflow_kickoff_api-2.1.5-py3-none-any.whl"
+    "requests>=2.33.0",
+    "jsonpath-ng>=1.8.0",
+    "PyJWT>=2.13.0",
+    "cxoneflow-kickoff-api@https://github.com/checkmarx-ts/cxone-flow/releases/download/2.4.0-111-prerelease/cxoneflow_kickoff_api-2.4.0rc111-py3-none-any.whl"
 ]
 description = "CxOneFlow Onboarding Audit Tool"
 requires-python = ">=3.9"
