@@ -33,6 +33,7 @@ jobs:
       - name: Build package
         run: |
           echo "__version__='${{ inputs.version }}'" > cxoneflow_audit/__version__/__version__.py
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
           pip3 install build
           python3 -m build
 

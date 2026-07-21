@@ -12,6 +12,9 @@ on:
       - reopened
       - synchronize
 
+env:
+  VIRTUALENV_NO_PERIODIC_UPDATE: 1
+
 permissions:
   contents: read
 
@@ -31,7 +34,9 @@ jobs:
           python-version: "3.12"
 
       - name: Setup Python Build Env
-        run: pip3 install virtualenv
+        run: |
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
+          pip install virtualenv
 
       - name: Scan with CxOne++ Action
         id: cxscan
