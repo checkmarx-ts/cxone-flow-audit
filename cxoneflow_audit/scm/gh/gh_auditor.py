@@ -11,7 +11,7 @@ class GithubAuditor(Auditor, GithubBase):
   def __init__(self, app_slug : str, app_key_file : str, *args, **kwargs):
     Auditor.__init__(self, *args, **kwargs)
     GithubBase.__init__(self, self.cxone_flow_url, self.scm_base_url,
-                        self.scm_pat, self.proxies, self.ignore_ssl_errors,
+                        self.proxies, self.ignore_ssl_errors,
                         app_slug, app_key_file)
     self.__data = {}
     self.__lock = Lock()

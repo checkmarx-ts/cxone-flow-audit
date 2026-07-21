@@ -1,10 +1,11 @@
+from typing import List
+from docopt import docopt
 from cxoneflow_audit.scm.ado.ado_auditor import AdoAuditor
 from cxoneflow_audit.scm.ado.ado_deployer import AdoDeployer
 from cxoneflow_audit.scm.ado.ado_remover import AdoRemover
 from cxoneflow_audit.scm.ado.ado_kicker import AdoKicker
-from typing import List
-from docopt import docopt
 from cxoneflow_audit.scm.common import SCMTool
+from cxoneflow_audit.scm import HTTPBearerAuth
 
 
 class AdoTool(SCMTool):
@@ -57,7 +58,7 @@ class AdoTool(SCMTool):
                             concurrency=self.concurrency, proxy=self.proxy,
                             ignore_ssl_errors=self.ssl_ignore,
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"), 
+                            auth=HTTPBearerAuth(SCMTool.resolve_from_env(args['--pat'], "CX_PAT")), 
                             cx_url=args['--cx-url'], scm_url=args['--scm-url']).execute()
 
   async def ado_deploy(self, ado_args : List[str], help : bool = False):
@@ -103,7 +104,7 @@ class AdoTool(SCMTool):
                              targets=args['TARGETS'], concurrency=self.concurrency, proxy=self.proxy,
                             ignore_ssl_errors=self.ssl_ignore,
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"), 
+                            auth=HTTPBearerAuth(SCMTool.resolve_from_env(args['--pat'], "CX_PAT")), 
                             cx_url=args['--cx-url'], scm_url=args['--scm-url']).execute()
   
 
@@ -140,7 +141,7 @@ class AdoTool(SCMTool):
     return await AdoRemover(targets=args['TARGETS'], concurrency=self.concurrency, proxy=self.proxy,
                             ignore_ssl_errors=self.ssl_ignore,
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"), 
+                            auth=HTTPBearerAuth(SCMTool.resolve_from_env(args['--pat'], "CX_PAT")), 
                             cx_url=args['--cx-url'], scm_url=args['--scm-url']).execute()
   
 
@@ -194,7 +195,7 @@ class AdoTool(SCMTool):
     return await AdoKicker(targets=args['TARGETS'], concurrency=self.concurrency, proxy=self.proxy,
                             ignore_ssl_errors=self.ssl_ignore, audit_file_path=args['--audit-file'],
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
+                            auth=HTTPBearerAuth(SCMTool.resolve_from_env(args['--pat'], "CX_PAT")),
                             ssh_private_key_path=args['--ssh-key-path'], 
                             ssh_private_key_password=SCMTool.resolve_from_env(args['--ssh-key-pass'], "CX_SSHPASS"),
                             cx_url=args['--cx-url'], scm_url=args['--scm-url']).execute()

@@ -4,6 +4,7 @@ from cxoneflow_audit.scm.gh.gh_auditor import GithubAuditor
 from cxoneflow_audit.scm.gh.gh_deployer import GithubDeployer
 from cxoneflow_audit.scm.gh.gh_remover import GithubRemover
 from cxoneflow_audit.scm.gh.gh_kicker import GithubKicker
+from cxoneflow_audit.scm import HTTPBearerAuth
 
 class GithubTool(SCMTool):
 
@@ -60,7 +61,7 @@ class GithubTool(SCMTool):
                             concurrency=self.concurrency, proxy=self.proxy,
                             ignore_ssl_errors=self.ssl_ignore,
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']),
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
+                            auth=HTTPBearerAuth(SCMTool.resolve_from_env(args['--pat'], "CX_PAT")),
                             cx_url=args['--cx-url'], scm_url=args['--scm-api-url'],
                             app_slug=args['--app-slug'], app_key_file=args['--app-key']).execute()
 
@@ -109,7 +110,7 @@ class GithubTool(SCMTool):
     return await GithubDeployer(concurrency=self.concurrency, proxy=self.proxy, targets=None,
                             ignore_ssl_errors=self.ssl_ignore,
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']),
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
+                            auth=HTTPBearerAuth(SCMTool.resolve_from_env(args['--pat'], "CX_PAT")),
                             cx_url=args['--cx-url'], scm_url=args['--scm-api-url'],
                             app_slug=args['--app-slug'],
                             shared_secret=SCMTool.resolve_from_env(args['--shared-secret'], "CX_SECRET"),
@@ -154,7 +155,7 @@ class GithubTool(SCMTool):
     return await GithubRemover(concurrency=self.concurrency, proxy=self.proxy, targets=None,
                             ignore_ssl_errors=self.ssl_ignore,
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']),
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
+                            auth=HTTPBearerAuth(SCMTool.resolve_from_env(args['--pat'], "CX_PAT")),
                             cx_url=args['--cx-url'], scm_url=args['--scm-api-url'],
                             app_slug=args['--app-slug'], app_key_file=args["--app-key"]).execute()
 
@@ -210,7 +211,7 @@ class GithubTool(SCMTool):
     return await GithubKicker(concurrency=self.concurrency, proxy=self.proxy, targets=None,
                             ignore_ssl_errors=self.ssl_ignore, audit_file_path=args['--audit-file'],
                             match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
+                            auth=HTTPBearerAuth(SCMTool.resolve_from_env(args['--pat'], "CX_PAT")),
                             ssh_private_key_path=args['--ssh-key-path'], 
                             ssh_private_key_password=SCMTool.resolve_from_env(args['--ssh-key-pass'], "CX_SSHPASS"),
                             cx_url=args['--cx-url'], scm_url=args['--scm-api-url'],
