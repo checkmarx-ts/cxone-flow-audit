@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from cxoneflow_audit.core.common import ConfigState
 from cxoneflow_audit.core import Auditor
-
+from .consts import BBC_API_URL
 
 class HookScope(Enum):
   def __str__(self):
@@ -45,10 +45,8 @@ class BitBucketCloudAuditor(Auditor):
 
   __ws_required_events = __repo_required_events + ["project:updated"]
 
-  _bbc_api_url = "https://api.bitbucket.org/2.0"
-
   def __init__(self, auth : requests.auth.AuthBase, *args, **kwargs):
-    Auditor.__init__(self, scm_url=BitBucketCloudAuditor._bbc_api_url, *args, **kwargs)
+    Auditor.__init__(self, scm_url=BBC_API_URL, *args, **kwargs)
     self.__auth = auth
     self.__lock = Lock()
     self.__data = []
