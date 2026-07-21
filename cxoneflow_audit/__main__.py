@@ -9,6 +9,7 @@ from cxoneflow_audit.__version__ import __version__, PROGNAME
 from cxoneflow_audit.log import bootstrap
 from cxoneflow_audit.scm.ado import AdoTool
 from cxoneflow_audit.scm.gh import GithubTool
+from cxoneflow_audit.scm.bitbucket.cloud import BitBucketCloudTool
 
 # pylint: disable=E1101
 requests.packages.urllib3.disable_warnings()
@@ -40,6 +41,7 @@ async def main():
   adoe                Commands for Azure DevOps
   gh                  Commands for Github
   gl                  Commands for Gitlab
+  bbc                 Commands for BitBucket Cloud
   bbdc                Commands for BitBucket Data Center
 
   Use "cxoneflow-audit help <scm>" for help details for each SCM.
@@ -90,6 +92,7 @@ async def main():
     main_map = {
       "adoe" : AdoTool(**(common_args(args))),
       "gh" : GithubTool(**(common_args(args))),
+      "bbc" : BitBucketCloudTool(**(common_args(args))),
     }
 
     scm = args['<scm>']

@@ -3,7 +3,11 @@ from cxoneflow_audit.util import NameMatcher
 from typing import Dict, List, AsyncGenerator, Any
 import logging, asyncio
 from enum import Enum
-
+from asyncio import to_thread
+import requests
+import requests.auth
+from cxoneflow_audit.util import ScmException
+from cxoneflow_audit.__version__ import PROGNAME
 
 class ConfigState(Enum):
   def __str__(self):
@@ -21,16 +25,35 @@ class Operation:
   def log(clazz) -> logging.Logger:
       return logging.getLogger(clazz.__name__)
 
-  def __init__(self, targets : List[str], concurrency : Semaphore, match : NameMatcher, pat : str, cx_url : str,
+  def __init__(self, targets : List[str], concurrency : Semaphore, match : NameMatcher, cx_url : str,
                scm_url : str, proxy : Dict, ignore_ssl_errors : bool):
     self.__concurrency = concurrency
     self.__targets = targets
     self.__match = match
-    self.__pat = pat
     self.__cx_url = cx_url
-    self.__scm_url = scm_url
+    self.__scm_url = scm_url.rstrip("/") + "/"
     self.__proxies = proxy
     self.__ignore_ssl_errors = ignore_ssl_errors
+
+    self.__required_headers = {"User-Agent" : PROGNAME}
+
+
+  async def __internal_api_call(self, url : str, query_args : Dict[str, str] = None, method : str = "GET", json_body : Dict = None,
+                      headers : Dict = {}, auth : requests.auth.AuthBase = None) -> requests.Response:
+    resp = await to_thread(requests.request, method, url, params=query_args,
+                     headers=headers, proxies=self.proxies,
+                     verify=not self.ignore_ssl_errors, json=json_body, auth=auth)
+    
+    if not resp.ok:
+      raise ScmException(f"{url} response: {resp.status_code}")
+
+    return resp
+
+  async def _scm_api_call(self, api_path : str, headers : Dict = {}, **kwargs) -> requests.Response:
+    url = self.scm_base_url + api_path.lstrip("/")
+    headers.update(self.__required_headers)
+    return await self.__internal_api_call(url, headers=headers, **kwargs)
+
 
   @property
   def proxies(self) -> Dict:
@@ -40,10 +63,6 @@ class Operation:
   def ignore_ssl_errors(self) -> bool:
     return self.__ignore_ssl_errors
 
-  @property
-  def scm_pat(self) -> str:
-    return self.__pat
-  
   @property
   def scm_base_url(self) -> str:
     return self.__scm_url
