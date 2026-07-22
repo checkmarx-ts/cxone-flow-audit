@@ -20,8 +20,8 @@ class Kicker(Operation):
       key_bytes = key.read()
 
     self.__ko_client = KickoffClient(key_bytes, ssh_private_key_password, 
-                                     self.cxone_flow_url.rstrip("/") + f"/{self.scm_key}/kickoff", 
-                                     PROGNAME, self.proxies, not self.ignore_ssl_errors)
+                                     self.cxoneflow_url.rstrip("/") + f"/{self.scm_key}/kickoff", 
+                                     PROGNAME, self.scm_service.proxies, self.scm_service.ssl_verify)
   
   @property
   def kickoff_client(self) -> KickoffClient:

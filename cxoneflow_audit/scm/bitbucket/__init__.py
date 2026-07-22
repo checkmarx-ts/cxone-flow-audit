@@ -1,1 +1,1 @@
-from .cloud import BitBucketCloudTool
+from .cloud import BitBucketCloudTool, BBCWorkspaceService
