@@ -38,3 +38,11 @@ class ScmException(Exception):
 
 
 class NotFoundException(Exception): ...
+
+
+class ServicePrincipalAuthException(Exception):
+
+    def __init__(self, auth_url: str):
+        Exception.__init__(
+            self, f"Unable to obtain Service Principal token from {auth_url}"
+        )
