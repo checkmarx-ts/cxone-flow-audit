@@ -1,6 +1,6 @@
 import requests, time, jwt
 from typing import Dict, AsyncGenerator, Callable, Coroutine, Any, Union
-from asyncio import Lock, to_thread
+from asyncio import Lock
 from dataclasses import dataclass
 from cxoneflow_audit.scm import SCMAPIService
 from cxoneflow_audit.__version__ import PROGNAME

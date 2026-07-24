@@ -67,7 +67,7 @@ class BitBucketCloudTool(SCMTool):
             scm_api_service=BBCWorkspaceService(
                 HTTPBasicAuth(
                     args["--api-token-email"],
-                    SCMTool.resolve_from_env(args["--api-token"], "CX_APITOKEN"),
+                    SCMTool.resolve_from_env(args.get("--api-token"), "CX_APITOKEN"),
                 ),
                 proxy=self.proxy,
                 ssl_verify=not self.ssl_ignore,
@@ -119,14 +119,14 @@ class BitBucketCloudTool(SCMTool):
             scm_api_service=BBCWorkspaceService(
                 HTTPBasicAuth(
                     args["--api-token-email"],
-                    SCMTool.resolve_from_env(args["--api-token"], "CX_APITOKEN"),
+                    SCMTool.resolve_from_env(args.get("--api-token"), "CX_APITOKEN"),
                 ),
                 proxy=self.proxy,
                 ssl_verify=not self.ssl_ignore,
             ),
             cxoneflow_url=args["--cx-url"],
             shared_secret=SCMTool.resolve_from_env(
-                args["--shared-secret"], "CX_SECRET"
+                args.get("--shared-secret"), "CX_SECRET"
             ),
             replace=args["--replace"],
         ).execute()
@@ -168,7 +168,7 @@ class BitBucketCloudTool(SCMTool):
             scm_api_service=BBCWorkspaceService(
                 HTTPBasicAuth(
                     args["--api-token-email"],
-                    SCMTool.resolve_from_env(args["--api-token"], "CX_APITOKEN"),
+                    SCMTool.resolve_from_env(args.get("--api-token"), "CX_APITOKEN"),
                 ),
                 proxy=self.proxy,
                 ssl_verify=not self.ssl_ignore,
@@ -230,14 +230,14 @@ class BitBucketCloudTool(SCMTool):
             scm_api_service=BBCWorkspaceService(
                 HTTPBasicAuth(
                     args["--api-token-email"],
-                    SCMTool.resolve_from_env(args["--api-token"], "CX_APITOKEN"),
+                    SCMTool.resolve_from_env(args.get("--api-token"), "CX_APITOKEN"),
                 ),
                 proxy=self.proxy,
                 ssl_verify=not self.ssl_ignore,
             ),
             ssh_private_key_path=args["--ssh-key-path"],
             ssh_private_key_password=SCMTool.resolve_from_env(
-                args["--ssh-key-pass"], "CX_SSHPASS"
+                args.get("--ssh-key-pass"), "CX_SSHPASS"
             ),
             cxoneflow_url=args["--cx-url"],
         ).execute()

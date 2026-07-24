@@ -74,7 +74,9 @@ class GithubTool(SCMTool):
                 api_base_url=args["--scm-api-url"],
                 app_slug=args["--app-slug"],
                 app_key_file=args["--app-key"],
-                auth=HTTPBearerAuth(SCMTool.resolve_from_env(args["--pat"], "CX_PAT")),
+                auth=HTTPBearerAuth(
+                    SCMTool.resolve_from_env(args.get("--pat"), "CX_PAT")
+                ),
                 proxy=self.proxy,
                 ssl_verify=not self.ssl_ignore,
             ),
@@ -130,13 +132,15 @@ class GithubTool(SCMTool):
             scm_api_service=GHService(
                 api_base_url=args["--scm-api-url"],
                 app_slug=args["--app-slug"],
-                auth=HTTPBearerAuth(SCMTool.resolve_from_env(args["--pat"], "CX_PAT")),
+                auth=HTTPBearerAuth(
+                    SCMTool.resolve_from_env(args.get("--pat"), "CX_PAT")
+                ),
                 proxy=self.proxy,
                 ssl_verify=not self.ssl_ignore,
             ),
             cxoneflow_url=args["--cx-url"],
             shared_secret=SCMTool.resolve_from_env(
-                args["--shared-secret"], "CX_SECRET"
+                args.get("--shared-secret"), "CX_SECRET"
             ),
             replace=args["--replace"],
         ).execute()
@@ -185,7 +189,9 @@ class GithubTool(SCMTool):
                 api_base_url=args["--scm-api-url"],
                 app_slug=args["--app-slug"],
                 app_key_file=args["--app-key"],
-                auth=HTTPBearerAuth(SCMTool.resolve_from_env(args["--pat"], "CX_PAT")),
+                auth=HTTPBearerAuth(
+                    SCMTool.resolve_from_env(args.get("--pat"), "CX_PAT")
+                ),
                 proxy=self.proxy,
                 ssl_verify=not self.ssl_ignore,
             ),
@@ -249,13 +255,15 @@ class GithubTool(SCMTool):
             scm_api_service=GHService(
                 api_base_url=args["--scm-api-url"],
                 app_slug=args["--app-slug"],
-                auth=HTTPBearerAuth(SCMTool.resolve_from_env(args["--pat"], "CX_PAT")),
+                auth=HTTPBearerAuth(
+                    SCMTool.resolve_from_env(args.get("--pat"), "CX_PAT")
+                ),
                 proxy=self.proxy,
                 ssl_verify=not self.ssl_ignore,
             ),
             ssh_private_key_path=args["--ssh-key-path"],
             ssh_private_key_password=SCMTool.resolve_from_env(
-                args["--ssh-key-pass"], "CX_SSHPASS"
+                args.get("--ssh-key-pass"), "CX_SSHPASS"
             ),
             cxoneflow_url=args["--cx-url"],
         ).execute()
