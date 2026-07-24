@@ -1,6 +1,5 @@
 from typing import Dict, Any, AsyncGenerator
-import requests
-import requests.auth
+import requests, requests.auth, logging
 from asyncio import to_thread
 from cxoneflow_audit.__version__ import PROGNAME
 from cxoneflow_audit.util import ScmException
@@ -16,7 +15,17 @@ class HTTPBearerAuth(requests.auth.AuthBase):
         return r
 
 
+class HTTPTokenBasicAuth(requests.auth.HTTPBasicAuth):
+    def __init__(self, token):
+        requests.auth.HTTPBasicAuth.__init__(self, "", token)
+
+
 class SCMAPIService:
+
+    @classmethod
+    def log(clazz) -> logging.Logger:
+        return logging.getLogger(clazz.__name__)
+
     def __init__(
         self,
         api_base_url: str,
@@ -29,6 +38,10 @@ class SCMAPIService:
         self.__proxies = proxy
         self.__ssl_verify = ssl_verify
         self.__required_headers = {"User-Agent": PROGNAME}
+
+    @property
+    def required_headers(self) -> Dict:
+        return self.__required_headers
 
     @property
     def proxies(self) -> Dict:
@@ -49,7 +62,7 @@ class SCMAPIService:
     ) -> requests.Response:
         url = self.__scm_url + api_path.lstrip("/")
 
-        headers.update(self.__required_headers)
+        headers.update(self.required_headers)
 
         resp = await to_thread(
             requests.request,
