@@ -1,13 +1,12 @@
-from cxoneflow_audit.scm.ado.ado_base import AdoBase
-from cxoneflow_audit.core import Kicker
-from typing import AsyncGenerator, Dict, Any, Union, Tuple
-from cxoneflow_kickoff_api import AdoKickoffMsg
 from asyncio import to_thread
 import requests, urllib.parse
+from typing import Dict, Any, Union, Tuple
 from jsonpath_ng import parse
+from cxoneflow_audit.core import Kicker
+from cxoneflow_kickoff_api import AdoKickoffMsg
+from .ado_service import ADOService
 
-
-class AdoKicker(Kicker, AdoBase):
+class AdoKicker(Kicker):
 
     __repo_remote_url = parse("$.remoteUrl")
     __repo_ssh_url = parse("$.sshUrl")
@@ -16,29 +15,9 @@ class AdoKicker(Kicker, AdoBase):
 
     __ref_sha = parse("$.value[*].objectId")
 
-    def __init__(self, *args, **kwargs):
-        Kicker.__init__(self, *args, **kwargs)
-        AdoBase.__init__(self)
+    def __init__(self, scm_api_service: ADOService, *args, **kwargs):
+        Kicker.__init__(self, scm_api_service=scm_api_service, *args, **kwargs)
 
-    @property
-    def _scm_name(self) -> str:
-        return "ADO"
-
-    def _get_lu_name(self, lu: Any) -> str:
-        return self._render_lu_name(lu)
-
-    def _get_lu_repr(self, lu: Any) -> str:
-        return self._render_lu_repr(lu)
-
-    async def _lu_iterator(self) -> AsyncGenerator[Dict, None]:
-        async for x in self._lu_iterator_delegate(
-            self.scm_base_url,
-            self.targets,
-            self.scm_pat,
-            self.proxies,
-            self.ignore_ssl_errors,
-        ):
-            yield x
 
     @property
     def scm_key(self) -> str:
@@ -84,21 +63,7 @@ class AdoKicker(Kicker, AdoBase):
 
         ref_params = {"filter": "heads", "filterContains": default_branch}
 
-        ref_params.update(self._api_ver_url_params())
-        ref_url = (
-            self._org_url(self.scm_base_url, collection_name)
-            + f"/{urllib.parse.quote(project_name)}/_apis/git/repositories/"
-            + f"{urllib.parse.quote(repo_name)}/refs"
-        )
-        ref_list = await to_thread(
-            requests.request,
-            "GET",
-            ref_url,
-            params=ref_params,
-            headers=self._required_headers(self.scm_pat),
-            proxies=self.proxies,
-            verify=not self.ignore_ssl_errors,
-        )
+        ref_list = await self.scm_service.get_repo_ref_list(collection_name, project_name, repo_name, ref_params)
 
         if not ref_list.ok:
             self.log().warning(
@@ -136,31 +101,19 @@ class AdoKicker(Kicker, AdoBase):
     async def _process_lu(self, lu: Any) -> bool:
         project_name = lu["name"]
 
-        repo_url = (
-            self._org_url(self.scm_base_url, lu["collection"])
-            + f"/{urllib.parse.quote(project_name)}/_apis/git/repositories"
-        )
 
-        repo_list = await to_thread(
-            requests.request,
-            "GET",
-            repo_url,
-            params=self._api_ver_url_params(),
-            headers=self._required_headers(self.scm_pat),
-            proxies=self.proxies,
-            verify=not self.ignore_ssl_errors,
-        )
+        repo_list = await self.scm_service.get_repo_list(lu["collection"], project_name)
 
         if not repo_list.ok:
             self.log().error(
-                f"{repo_list.status_code} returned attempting to obtain a list of repositories for LU {self._render_lu_repr(lu)}"
+                f"{repo_list.status_code} returned attempting to obtain a list of repositories for LU {self.scm_service.get_lu_repr(lu)}"
             )
             return False
 
         repo_list_json = repo_list.json()
         repo_count = repo_list_json["count"]
         self.log().info(
-            f"{repo_count} repositories found for LU {self._render_lu_repr(lu)}"
+            f"{repo_count} repositories found for LU {self.scm_service.get_lu_repr(lu)}"
         )
 
         async def repo_iter():
@@ -170,7 +123,7 @@ class AdoKicker(Kicker, AdoBase):
         async for repo in repo_iter():
             try:
                 msg, clone_url = await self.__kickoff_msg_factory(
-                    lu["collection"], project_name, self._render_lu_repr(lu), repo
+                    lu["collection"], project_name, self.scm_service.get_lu_repr(lu), repo
                 )
                 if msg is None:
                     continue
