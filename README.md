@@ -6,7 +6,9 @@ This is a command line tool that can be used to audit, configure, and de-configu
 This currently supports the following SCM types:
 
 * Azure DevOps Cloud and Enterprise
-* Github Cloud and Enterprise (self-hosted)
+  * Token or Service Principal authentication supported
+* Github Cloud and self-hosted Enterprise
+* BitBucket Cloud
 
 ## Installation
 
@@ -166,6 +168,10 @@ of the app can't be validated.
 
 Display the Github `audit` help with the command `cxoneflow-audit help gh audit`.
 
+### BitBucket Cloud
+
+Audit will assess if webhooks have been deployed to the workspace or to repositories in a workspace.
+
 ## Deploy Function
 
 ### Azure DevOps
@@ -192,6 +198,10 @@ the webhooks and Github app configured to emit events.
 
 Display the Github `deploy` help with the command `cxoneflow-audit help gh deploy`.
 
+### BitBucket Cloud
+
+Deployment of webhooks is performed on the workspace only.
+
 ## Remove Function
 
 ### Azure DevOps
@@ -216,6 +226,10 @@ following permissions:
 
 Display the Github `remove` help with the command `cxoneflow-audit help gh remove`.
 
+### BitBucket Cloud
+
+Removal of webhooks is performed on the workspace only.
+
 ## Kickoff Function
 
 ### Azure DevOps
@@ -238,6 +252,11 @@ instance of the Github app.  If the app installation configuration can't be dete
 for that organization may fail to start.
 
 Display the Github `kickoff` help with the command `cxoneflow-audit help gh kickoff`.
+
+
+### BitBucket Cloud
+
+Repositories in the workspace will be iterated and scanned.
 
 ## SCM Specific Information
 
