@@ -25,14 +25,12 @@ class Operation:
 
     def __init__(
         self,
-        targets: List[str],
         concurrency: Semaphore,
         match: NameMatcher,
         scm_api_service: SCMAPIService,
         cxoneflow_url: str,
     ):
         self.__concurrency = concurrency
-        self.__targets = targets
         self.__match = match
         self.__scm_service = scm_api_service
         self.__cx_url = cxoneflow_url
@@ -44,10 +42,6 @@ class Operation:
     @property
     def cxoneflow_url(self) -> str:
         return self.__cx_url
-
-    @property
-    def targets(self) -> List[str]:
-        return self.__targets
 
     async def __thread(self, lu: Any) -> bool:
         async with self.__concurrency:
