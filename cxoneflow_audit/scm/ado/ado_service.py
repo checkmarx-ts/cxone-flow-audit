@@ -60,14 +60,20 @@ class ADOService(SCMAPIService):
     def _encode(self, value: str) -> str:
         return f"{urllib.parse.quote(value)}"
 
-    async def _scm_api_call(self, query_args : Dict = {}, *args, **kwargs) -> requests.Response:
+    async def _scm_api_call(
+        self, query_args: Dict = {}, *args, **kwargs
+    ) -> requests.Response:
         retry = True
 
         query_args.update(self._api_ver_url_params())
 
         while True:
             resp = await SCMAPIService._scm_api_call(
-                self, auth=await self._get_auth(not retry), query_args=query_args, *args, **kwargs
+                self,
+                auth=await self._get_auth(not retry),
+                query_args=query_args,
+                *args,
+                **kwargs,
             )
 
             if retry and resp.status_code == 401:
@@ -285,14 +291,23 @@ class ADOService(SCMAPIService):
         "git.push": update_hook_push_from_sub_json,
     }
 
+    async def get_repo_ref_list(
+        self, collection_name: str, project_name: str, repo_name: str, query_args: Dict
+    ) -> requests.Response:
+        return await self._scm_api_call(
+            api_path=self._encode(collection_name)
+            + f"/{self._encode(project_name)}/_apis/git/repositories/"
+            + f"{self._encode(repo_name)}/refs",
+            query_args=query_args,
+        )
 
-    async def get_repo_ref_list(self, collection_name : str, project_name : str, repo_name : str, query_args : Dict) -> requests.Response:
-        return await self._scm_api_call(api_path=self._encode(collection_name) +
-                                        f"/{self._encode(project_name)}/_apis/git/repositories/" + 
-                                        f"{self._encode(repo_name)}/refs", query_args=query_args)
+    async def get_repo_list(
+        self, collection_name: str, project_name: str
+    ) -> requests.Response:
+        return await self._scm_api_call(
+            api_path=f"{self._encode(collection_name)}/{self._encode(project_name)}/_apis/git/repositories"
+        )
 
-    async def get_repo_list(self, collection_name : str, project_name : str) -> requests.Response:
-        return await self._scm_api_call(api_path=f"{self._encode(collection_name)}/{self._encode(project_name)}/_apis/git/repositories")
 
 class ADOBasicAuthService(ADOService):
     def __init__(
