@@ -61,7 +61,6 @@ class BitBucketCloudTool(SCMTool):
         return await BitBucketCloudAuditor(
             outfile=args["--outfile"],
             only_not_cfg=args["--no-config"],
-            targets=None,
             concurrency=self.concurrency,
             match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
             scm_api_service=BBCWorkspaceService(
@@ -114,7 +113,6 @@ class BitBucketCloudTool(SCMTool):
 
         return await BitBucketCloudDeployer(
             concurrency=self.concurrency,
-            targets=None,
             match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
             scm_api_service=BBCWorkspaceService(
                 HTTPBasicAuth(
@@ -163,7 +161,6 @@ class BitBucketCloudTool(SCMTool):
 
         return await BitBucketCloudRemover(
             concurrency=self.concurrency,
-            targets=None,
             match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
             scm_api_service=BBCWorkspaceService(
                 HTTPBasicAuth(
@@ -224,7 +221,6 @@ class BitBucketCloudTool(SCMTool):
 
         return await BitBucketCloudKicker(
             concurrency=self.concurrency,
-            targets=None,
             audit_file_path=args["--audit-file"],
             match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
             scm_api_service=BBCWorkspaceService(

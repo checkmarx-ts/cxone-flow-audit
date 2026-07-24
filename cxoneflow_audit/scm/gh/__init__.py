@@ -67,7 +67,6 @@ class GithubTool(SCMTool):
         return await GithubAuditor(
             outfile=args["--outfile"],
             only_not_cfg=args["--no-config"],
-            targets=None,
             concurrency=self.concurrency,
             match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
             scm_api_service=GHService(
@@ -127,7 +126,6 @@ class GithubTool(SCMTool):
 
         return await GithubDeployer(
             concurrency=self.concurrency,
-            targets=None,
             match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
             scm_api_service=GHService(
                 api_base_url=args["--scm-api-url"],
@@ -183,7 +181,6 @@ class GithubTool(SCMTool):
 
         return await GithubRemover(
             concurrency=self.concurrency,
-            targets=None,
             match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
             scm_api_service=GHService(
                 api_base_url=args["--scm-api-url"],
@@ -249,7 +246,6 @@ class GithubTool(SCMTool):
 
         return await GithubKicker(
             concurrency=self.concurrency,
-            targets=None,
             audit_file_path=args["--audit-file"],
             match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
             scm_api_service=GHService(
