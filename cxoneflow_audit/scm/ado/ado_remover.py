@@ -3,6 +3,7 @@ from typing import Any
 from asyncio import gather
 from .ado_service import ADOService
 
+
 class AdoRemover(Remover):
     def __init__(self, scm_api_service: ADOService, *args, **kwargs):
         Remover.__init__(self, scm_api_service=scm_api_service, *args, **kwargs)
@@ -21,7 +22,9 @@ class AdoRemover(Remover):
         ]
 
         if len(sub_ids) > 0:
-            AdoRemover.log().info(f"Removing webhook subscriptions for {self.scm_service.get_lu_repr(lu)}")
+            AdoRemover.log().info(
+                f"Removing webhook subscriptions for {self.scm_service.get_lu_repr(lu)}"
+            )
             await gather(
                 *[
                     self.scm_service.delete_subscription(lu["collection"], sub_id)
@@ -29,7 +32,8 @@ class AdoRemover(Remover):
                 ]
             )
         else:
-            AdoRemover.log().info(f"No webhook subscriptions to remove for {self.scm_service.get_lu_repr(lu)}")
-            
+            AdoRemover.log().info(
+                f"No webhook subscriptions to remove for {self.scm_service.get_lu_repr(lu)}"
+            )
 
         return True

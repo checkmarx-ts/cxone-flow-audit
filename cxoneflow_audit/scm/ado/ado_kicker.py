@@ -6,6 +6,7 @@ from cxoneflow_audit.core import Kicker
 from cxoneflow_kickoff_api import AdoKickoffMsg
 from .ado_service import ADOService
 
+
 class AdoKicker(Kicker):
 
     __repo_remote_url = parse("$.remoteUrl")
@@ -17,7 +18,6 @@ class AdoKicker(Kicker):
 
     def __init__(self, scm_api_service: ADOService, *args, **kwargs):
         Kicker.__init__(self, scm_api_service=scm_api_service, *args, **kwargs)
-
 
     @property
     def scm_key(self) -> str:
@@ -63,7 +63,9 @@ class AdoKicker(Kicker):
 
         ref_params = {"filter": "heads", "filterContains": default_branch}
 
-        ref_list = await self.scm_service.get_repo_ref_list(collection_name, project_name, repo_name, ref_params)
+        ref_list = await self.scm_service.get_repo_ref_list(
+            collection_name, project_name, repo_name, ref_params
+        )
 
         if not ref_list.ok:
             self.log().warning(
@@ -101,7 +103,6 @@ class AdoKicker(Kicker):
     async def _process_lu(self, lu: Any) -> bool:
         project_name = lu["name"]
 
-
         repo_list = await self.scm_service.get_repo_list(lu["collection"], project_name)
 
         if not repo_list.ok:
@@ -123,7 +124,10 @@ class AdoKicker(Kicker):
         async for repo in repo_iter():
             try:
                 msg, clone_url = await self.__kickoff_msg_factory(
-                    lu["collection"], project_name, self.scm_service.get_lu_repr(lu), repo
+                    lu["collection"],
+                    project_name,
+                    self.scm_service.get_lu_repr(lu),
+                    repo,
                 )
                 if msg is None:
                     continue
