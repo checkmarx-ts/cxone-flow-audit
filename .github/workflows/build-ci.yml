@@ -17,6 +17,18 @@ on:
 
 jobs:
 
+  check-format:
+    runs-on: cx-public-ubuntu-x64
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+
+      - name: Check formatting
+        run: |
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
+          pip install . pylint
+
+
   execute-pylint:
     runs-on: cx-public-ubuntu-x64
     strategy:
@@ -33,11 +45,16 @@ jobs:
       - name: Fetch Code
         uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
 
-      - name: Install packages
+      - uses: actions/setup-python@82c7e631bb3cdc910f68e0081d67478d79c6982d
+        with:
+          python-version: "3.12"
+
+      - name: Check formatting
         shell: bash
         run: |
           pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
-          pip install . pylint
+          pip install . black==26.5.1
+          black --check .
 
       - name: Pylint
         shell: bash
