@@ -1,3 +1,4 @@
+import logging
 from docopt import docopt, DocoptExit
 from cxoneflow_audit.__version__ import PROGNAME
 from typing import List, Dict
@@ -16,6 +17,10 @@ class SCMTool:
         self.__sem = concurrency
         self.__proxy = proxy
         self.__ssl_ignore = ssl_ignore
+
+    @classmethod
+    def log(clazz) -> logging.Logger:
+        return logging.getLogger(clazz.__name__)
 
     @staticmethod
     def resolve_from_env(value, env_key):
