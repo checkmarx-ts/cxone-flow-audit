@@ -1,66 +1,35 @@
 from cxoneflow_audit.core import Remover
-from .ado_servicemgr import AdoServiceManager
-from typing import Any, Dict, AsyncGenerator
-from asyncio import wait, get_running_loop
+from typing import Any
+from asyncio import gather
+from .ado_service import ADOService
 
-
-class AdoRemover(Remover, AdoServiceManager):
-    def __init__(self, *args, **kwargs):
-        Remover.__init__(self, *args, **kwargs)
-        AdoServiceManager.__init__(self)
-
-    @property
-    def _scm_name(self) -> str:
-        return "ADO"
-
-    def _get_lu_name(self, lu: Any) -> str:
-        return self._render_lu_name(lu)
-
-    def _get_lu_repr(self, lu: Any) -> str:
-        return self._render_lu_repr(lu)
-
-    async def _lu_iterator(self) -> AsyncGenerator[Dict, None]:
-        async for x in self._lu_iterator_delegate(
-            self.scm_base_url,
-            self.targets,
-            self.scm_pat,
-            self.proxies,
-            self.ignore_ssl_errors,
-        ):
-            yield x
+class AdoRemover(Remover):
+    def __init__(self, scm_api_service: ADOService, *args, **kwargs):
+        Remover.__init__(self, scm_api_service=scm_api_service, *args, **kwargs)
 
     async def _process_lu(self, lu: Any) -> bool:
         sub_ids = [
             s["id"]
-            for s in self._get_subs_for_project(
-                await self._list_lu_webhook_subscriptions(
-                    self.scm_base_url,
+            for s in self.scm_service.get_subs_for_project(
+                await self.scm_service.list_lu_webhook_subscriptions(
                     lu["collection"],
-                    self.scm_pat,
-                    self.proxies,
-                    self.ignore_ssl_errors,
                 ),
                 lu["id"],
-                self._make_cx_endpoint_url(self.cxone_flow_url),
-                self.ADO_EVENT_TYPES,
+                self.scm_service.make_cx_endpoint_url(self.cxoneflow_url),
+                ADOService.ADO_EVENT_TYPES,
             )
         ]
 
         if len(sub_ids) > 0:
-            await wait(
-                [
-                    get_running_loop().create_task(
-                        self._delete_subscription(
-                            lu["collection"],
-                            sub_id,
-                            self.scm_base_url,
-                            self.scm_pat,
-                            self.proxies,
-                            self.ignore_ssl_errors,
-                        )
-                    )
+            AdoRemover.log().info(f"Removing webhook subscriptions for {self.scm_service.get_lu_repr(lu)}")
+            await gather(
+                *[
+                    self.scm_service.delete_subscription(lu["collection"], sub_id)
                     for sub_id in sub_ids
                 ]
             )
+        else:
+            AdoRemover.log().info(f"No webhook subscriptions to remove for {self.scm_service.get_lu_repr(lu)}")
+            
 
         return True
