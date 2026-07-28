@@ -20,7 +20,7 @@ jobs:
     runs-on: cx-public-ubuntu-x64
     steps:
       - name: Fetch Code
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           ref: ${{ inputs.version }}
 
@@ -59,8 +59,6 @@ jobs:
 
       - name: Create GitHub release
         if: ${{ ! inputs.buildonly }} 
-        permissions:
-          contents: write
         id: create_release
         uses: step-security/release-action@a0d8e0f90f554c15366ca2c9046bf4090d24adbe # v1.21.0
         with:

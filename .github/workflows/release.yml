@@ -36,7 +36,7 @@ jobs:
     steps:
       - name: Fetch Code
         continue-on-error: true
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         with:
           ref: refs/tags/${{ needs.make-tag-string.outputs.tag }}
 
@@ -53,7 +53,7 @@ jobs:
       contents: write
     steps:
       - name: Fetch Code
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
         
       - name: Set Version
         if: ${{ inputs.version != '' }}
@@ -85,7 +85,7 @@ jobs:
     if: ${{ failure() && needs.create-tag.outputs.done }}
     steps:
       - name: Fetch Code
-        uses: actions/checkout@0ad4b8fadaa221de15dcec353f45205ec38ea70b
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
       - name: Remove CodeTag
         run: git push origin ':refs/tags/${{ needs.make-tag-string.outputs.tag }}'
