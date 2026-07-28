@@ -26,7 +26,8 @@ jobs:
       - name: Check formatting
         run: |
           pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
-          pip install . pylint
+          pip install . black==26.5.1
+          black --check .
 
 
   execute-pylint:
@@ -49,16 +50,11 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Check formatting
-        shell: bash
-        run: |
-          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
-          pip install . black==26.5.1
-          black --check .
-
       - name: Pylint
         shell: bash
         run: |
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
+          pip install . pylint
           pylint --disable=all --enable=E,F --disable=E1121 --score=false cxoneflow_audit
 
   call-package-build:
