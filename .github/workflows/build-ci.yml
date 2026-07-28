@@ -14,6 +14,8 @@ on:
         required: true
   push:
 
+permissions:
+  contents: read
 
 jobs:
 
