@@ -42,54 +42,6 @@ jobs:
           git tag '${{ steps.tag-string.outputs.tag }}'
           git push origin '${{ steps.tag-string.outputs.tag }}'
 
-  # make-tag-string:
-  #   runs-on: cx-public-ubuntu-x64
-  #   outputs:
-  #     tag: ${{ steps.tag-string.outputs.tag }}
-  #   steps:
-  #     - name: Create tag string
-  #       run: |
-  #         [ ${{ inputs.prerelease }} = false ] && echo "tag=${{ inputs.version }}" >> $GITHUB_OUTPUT || \
-  #           echo "tag=${{ inputs.version }}rc$GITHUB_RUN_NUMBER" >> $GITHUB_OUTPUT
-  #       id: tag-string
-
-  # validate-no-tag:
-  #   runs-on: cx-public-ubuntu-x64
-  #   needs: [make-tag-string]
-  #   steps:
-  #     - name: Fetch Code
-  #       continue-on-error: true
-  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-  #       with:
-  #         ref: refs/tags/${{ needs.make-tag-string.outputs.tag }}
-
-  #     - name: Fail if tag ${{ needs.make-tag-string.outputs.tag }} exists
-  #       run: |
-  #         [[ $(git describe --tags) ==  ${{ needs.make-tag-string.outputs.tag }} ]] && exit 1 || :
-
-  # create-tag:
-  #   runs-on: cx-public-ubuntu-x64
-  #   needs: [make-tag-string, validate-no-tag]
-  #   outputs:
-  #     done: ${{ steps.done_check.outputs.status }}
-  #   permissions:
-  #     contents: write
-  #   steps:
-  #     - name: Fetch Code
-  #       uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
-        
-  #     - name: Set Version
-  #       if: ${{ inputs.version != '' }}
-  #       run: |
-  #         git config --global user.email "${{ github.triggering_actor }}"
-  #         git config --global user.name "${{ github.triggering_actor }}"
-  #         git tag ${{ needs.make-tag-string.outputs.tag }}
-  #         git push origin --tags
-
-  #     - name: Set tag status
-  #       id: done_check
-  #       run: |
-  #         echo "status=true" >> "$GITHUB_OUTPUT"
 
   build-wheel:
     needs: [tag-repo]
@@ -99,19 +51,56 @@ jobs:
       tag: ${{ needs.tag-repo.outputs.tag }}
       version: ${{ inputs.version }}
 
-  # publish-release:
-  #   permissions:
-  #     contents: write
-  #   needs: [make-tag-string, create-tag]
-  #   uses: ./.github/workflows/build.yml
-  #   with:
-  #     version: ${{ needs.make-tag-string.outputs.tag }}
-  #     prerelease: ${{ inputs.prerelease }}
+  publish-release:
+    permissions:
+      contents: write
+    needs: [tag-repo, build-wheel]
+    steps:
 
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+
+      - name: Download package wheel
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: whl-${{ github.run_number }}
+
+      - name: Make release text
+        run: |
+          WHEEL_NAME=$(basename $(ls *.whl))
+          WHEEL_HASH=$(pip hash dist/$WHEEL_NAME | grep "^--")
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ needs.tag-repo.outputs.tag }}/$WHEEL_NAME"
+
+          echo "# CxOneFlow Audit Tool ${{ needs.tag-repo.outputs.tag }}" > release.md
+
+          echo 'Installation can be performed by executing the following in a command shell:' >> release.md
+
+          echo '```' >> release.md
+          echo pip install $RELEASE_URL >> release.md
+          echo '```' >> release.md
+
+          echo "## Hashes" >> release.md
+          echo "### $WHEEL_NAME" >> release.md
+          echo '```' >> release.md
+          echo "$WHEEL_HASH" >> release.md
+          echo '```' >> release.md
+
+      - name: Create GitHub release
+        id: create_release
+        uses: step-security/release-action@a0d8e0f90f554c15366ca2c9046bf4090d24adbe # v1.21.0
+        with:
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: *.whl
+          bodyFile: release.md
+          name: ${{ needs.tag-repo.outputs.tag }}
+          prerelease: ${{ inputs.prerelease }}
+          tag: ${{ needs.tag-repo.outputs.tag }}
 
 
   remove-tag-on-failure:
-    needs: [tag-repo, build-wheel]
+    needs: [tag-repo, publish-release]
     runs-on: cx-public-ubuntu-x64
     permissions:
       contents: write
@@ -122,3 +111,13 @@ jobs:
 
       - name: Remove tag
         run: git push origin ':refs/tags/${{ needs.tag-repo.outputs.tag }}'
+
+  artifact-cleanup:
+    runs-on: cx-public-ubuntu-x64
+    needs: [publish-release]
+    if: always()
+    steps:
+      - uses: step-security/delete-artifact@9a5b2d6793eb97cf052deddb87cd073aabb77385 # v6.0.0
+        with:
+          name: |
+            whl-${{ github.run_number }}
