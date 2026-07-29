@@ -52,6 +52,7 @@ jobs:
       version: ${{ inputs.version }}
 
   publish-release:
+    runs-on: cx-public-ubuntu-x64
     permissions:
       contents: write
     needs: [tag-repo, build-wheel]
@@ -100,8 +101,8 @@ jobs:
 
 
   remove-tag-on-failure:
-    needs: [tag-repo, publish-release]
     runs-on: cx-public-ubuntu-x64
+    needs: [tag-repo, publish-release]
     permissions:
       contents: write
     if: (failure() || cancelled()) && needs.tag-repo.result == 'success'
