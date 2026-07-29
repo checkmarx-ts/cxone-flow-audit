@@ -1,0 +1,43 @@
+name: Build Wheel Package [called]
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        default: ''
+      tag:
+        type: string
+        default: ''
+      buildonly:
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+jobs:
+  build-package:
+    runs-on: cx-public-ubuntu-x64
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+        with:
+          ref: ${{ inputs.tag }}
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+
+      - name: Build package
+        run: |
+          echo "__version__='${{ inputs.version }}'" > cxoneflow_audit/__version__/__version__.py
+          pip config set global.index-url https://:${{ secrets.ECHO_LIBRARIES_ACCESS_KEY }}@pypi.echohq.com/simple
+          pip install build
+          python -m build
+
+      - name: Upload whl
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: ${{ ! inputs.buildonly }}
+        with:
+          name: whl-${{ github.run_number }}
+          path: dist/*.whl

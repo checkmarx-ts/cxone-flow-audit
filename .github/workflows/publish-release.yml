@@ -91,15 +91,14 @@ jobs:
   #       run: |
   #         echo "status=true" >> "$GITHUB_OUTPUT"
 
-
-  check:
-    runs-on: cx-public-ubuntu-x64
+  build-wheel:
     needs: [tag-repo]
-    steps:
-      - name: Echo tag
-        run: exit 1
-
-
+    uses: ./.github/workflows/build-package.yml
+    secrets: inherit
+    with:
+      tag: ${{ needs.tag-repo.outputs.tag }}
+      version: ${{ inputs.version }}
+      buildonly: ${{ inputs.prerelease }}
 
 
   # publish-release:
@@ -114,7 +113,7 @@ jobs:
 
 
   remove-tag-on-failure:
-    needs: [tag-repo, check]
+    needs: [tag-repo, build-wheel]
     runs-on: cx-public-ubuntu-x64
     permissions:
       contents: write
