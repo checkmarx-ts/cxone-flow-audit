@@ -92,7 +92,7 @@ jobs:
         with:
           allowUpdates: true
           artifactErrorsFailBuild: true
-          artifacts: *.whl
+          artifacts: ./*.whl
           bodyFile: release.md
           name: ${{ needs.tag-repo.outputs.tag }}
           prerelease: ${{ inputs.prerelease }}
