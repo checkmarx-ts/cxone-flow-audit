@@ -98,7 +98,7 @@ jobs:
     steps:
       - name: Echo tag
         run: exit 1
-        
+
 
 
 
@@ -114,7 +114,7 @@ jobs:
 
 
   remove-tag-on-failure:
-    needs: [tag-repo]
+    needs: [tag-repo, check]
     runs-on: cx-public-ubuntu-x64
     permissions:
       contents: write
