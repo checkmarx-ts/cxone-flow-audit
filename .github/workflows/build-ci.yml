@@ -63,5 +63,6 @@ jobs:
 
   call-package-build:
     uses: ./.github/workflows/build-package.yml
+    secrets: inherit
     with:
       buildonly: true
