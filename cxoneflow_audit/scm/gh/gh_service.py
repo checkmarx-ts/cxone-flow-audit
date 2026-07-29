@@ -90,12 +90,6 @@ class GHService(SCMAPIService):
     def check_for_app(self) -> bool:
         return not self.__app_slug is None
 
-    def eval_correct_webhook_url(self, url: str) -> bool:
-        return url.startswith(self.webhook_url)
-
-    def __required_pat_headers(self) -> Dict:
-        return {"User-Agent": PROGNAME}
-
     async def __app_api_call(
         self,
         api_path: str,

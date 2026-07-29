@@ -82,4 +82,4 @@ class BBCWorkspaceService(SCMAPIService):
         return lu.get("workspace", {}).get("slug", "UNKNOWN")
 
     def get_lu_repr(self, lu: Any) -> str:
-        return f"{self.get_lu_name(lu)}:{lu.get("workspace", {}).get("links", {}).get("self", {}).get("href")}"
+        return f"{self.get_lu_name(lu)}:{lu.get('workspace', {}).get('links', {}).get('self', {}).get('href')}"

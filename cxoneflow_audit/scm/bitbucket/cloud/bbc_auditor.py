@@ -30,6 +30,7 @@ class BitBucketCloudAuditor(Auditor):
         )
 
         configured = False
+        endpoint = False
 
         if not ws_config.hookUrl.startswith(self.cxoneflow_url):
             return False

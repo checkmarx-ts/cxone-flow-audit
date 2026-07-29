@@ -1,7 +1,8 @@
 import base64, requests
 from requests.auth import AuthBase
 from asyncio import Lock, to_thread
-from datetime import datetime, UTC, timedelta
+from datetime import datetime, timedelta, timezone
+import datetime as datetime_module
 import urllib.parse
 from dataclasses import dataclass
 from typing import Dict, AsyncGenerator, List, Any, Union
@@ -11,6 +12,9 @@ from cxoneflow_audit.util import ScmException
 from cxoneflow_audit.core.common import ConfigState
 from cxoneflow_audit.scm import SCMAPIService, HTTPTokenBasicAuth, HTTPBearerAuth
 from cxoneflow_audit.util import ScmException, ServicePrincipalAuthException
+
+# Python 3.10 compatibility
+UTC = getattr(datetime_module, "UTC", timezone.utc)
 
 
 @dataclass(frozen=False)
