@@ -70,7 +70,7 @@ jobs:
       - name: Make release text
         run: |
           WHEEL_NAME=$(basename $(ls *.whl))
-          WHEEL_HASH=$(pip hash dist/$WHEEL_NAME | grep "^--")
+          WHEEL_HASH=$(pip hash $WHEEL_NAME | grep "^--")
           RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ needs.tag-repo.outputs.tag }}/$WHEEL_NAME"
 
           echo "# CxOneFlow Audit Tool ${{ needs.tag-repo.outputs.tag }}" > release.md
