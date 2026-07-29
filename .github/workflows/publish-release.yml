@@ -114,22 +114,15 @@ jobs:
 
 
 
-
-
-
-
-
-
-
   remove-tag-on-failure:
-    needs: [make-tag-string, create-tag, publish-release]
+    needs: [tag-repo]
     runs-on: cx-public-ubuntu-x64
     permissions:
       contents: write
-    if: ${{ failure() && needs.create-tag.outputs.done }}
+    if: (failure() || cancelled()) && needs.tag-repo.result == 'success'
     steps:
       - name: Fetch Code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
 
-      - name: Remove CodeTag
-        run: git push origin ':refs/tags/${{ needs.make-tag-string.outputs.tag }}'
+      - name: Remove tag
+        run: git push origin ':refs/tags/${{ needs.tag-repo.outputs.tag }}'
