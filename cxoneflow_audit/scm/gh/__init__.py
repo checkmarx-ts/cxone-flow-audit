@@ -4,233 +4,282 @@ from cxoneflow_audit.scm.gh.gh_auditor import GithubAuditor
 from cxoneflow_audit.scm.gh.gh_deployer import GithubDeployer
 from cxoneflow_audit.scm.gh.gh_remover import GithubRemover
 from cxoneflow_audit.scm.gh.gh_kicker import GithubKicker
+from cxoneflow_audit.scm.gh.gh_service import GHService
+from cxoneflow_audit.scm import HTTPBearerAuth
+
 
 class GithubTool(SCMTool):
 
-  def __init__(self, **kwargs):
-     super().__init__(audit=self.gh_audit, deploy=self.gh_deploy, remove=self.gh_remove, kickoff=self.gh_kickoff, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(
+            audit=self.gh_audit,
+            deploy=self.gh_deploy,
+            remove=self.gh_remove,
+            kickoff=self.gh_kickoff,
+            **kwargs,
+        )
 
-  async def gh_audit(self, args : List[str], help : bool = False):
-    """Usage: cxoneflow-audit gh audit [--no-config] [--outfile CSVFILE] 
-                      [--match-regex M_REGEX | --skip-regex S_REGEX]
-                      [--app-slug SLUG]
-                      [--app-key KEYFILE]
-                      (--pat PAT | --pat-env) (--scm-api-url URL)
-                      (--cx-url CX_URL)
-    
-    Deployment Options
+    async def gh_audit(self, args: List[str], help: bool = False):
+        """Usage: cxoneflow-audit gh audit [--no-config] [--outfile CSVFILE]
+                          [--match-regex M_REGEX | --skip-regex S_REGEX]
+                          [--app-slug SLUG]
+                          [--app-key KEYFILE]
+                          (--pat PAT | --pat-env) (--scm-api-url URL)
+                          (--cx-url CX_URL)
 
-    --cx-url CX_URL             The base URL for the CxOneFlow endpoint 
-                                (e.g. https://cxoneflow.corp.com)
+        Deployment Options
 
-    Output Options
+        --cx-url CX_URL             The base URL for the CxOneFlow endpoint
+                                    (e.g. https://cxoneflow.corp.com)
 
-    --outfile CSVFILE          The path to a file where the audit CSV will be
-                               written. [default: ./cxoneflow.csv]
+        Output Options
 
-    --no-config                Only include projects that are not configured.
+        --outfile CSVFILE          The path to a file where the audit CSV will be
+                                   written. [default: ./cxoneflow.csv]
 
-    Filtering Options
+        --no-config                Only include projects that are not configured.
 
-    --match-regex M_REGEX      Regular expression matching organization names that
-                               should be configured to send events to CxOneFlow.
+        Filtering Options
 
-    --skip-regex S_REGEX       Regular expression matching organization names that
-                               should not be configured to send events to CxOneFlow.
+        --match-regex M_REGEX      Regular expression matching organization names that
+                                   should be configured to send events to CxOneFlow.
 
-    SCM Options
+        --skip-regex S_REGEX       Regular expression matching organization names that
+                                   should not be configured to send events to CxOneFlow.
 
-    --pat PAT                  An SCM PAT with appropriate privileges.
+        SCM Options
 
-    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+        --pat PAT                  An SCM PAT with appropriate privileges.
 
-    --scm-api-url URL          The URL to the SCM's API endpoint 
-                               (e.g. https://api.github.com, https://github.corp.com/api/v3/)
-    
-    Github App Options
-  
-    --app-slug SLUG             The Github app slug for the CxOneFlow app.
+        --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
 
-    --app-key KEYFILE           The path to the app private key file.
-    """
-    args = self._get_opts(self.gh_audit.__doc__, ["gh", "audit"] + args, help)
+        --scm-api-url URL          The URL to the SCM's API endpoint
+                                   (e.g. https://api.github.com, https://github.corp.com/api/v3/)
 
-    return await GithubAuditor(outfile=args['--outfile'], only_not_cfg=args['--no-config'],
-                            targets=None,
-                            concurrency=self.concurrency, proxy=self.proxy,
-                            ignore_ssl_errors=self.ssl_ignore,
-                            match=self._matcher_factory(args['--skip-regex'], args['--match-regex']),
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
-                            cx_url=args['--cx-url'], scm_url=args['--scm-api-url'],
-                            app_slug=args['--app-slug'], app_key_file=args['--app-key']).execute()
+        Github App Options
 
-  async def gh_deploy(self, args : List[str], help : bool = False):
-    """Usage: cxoneflow-audit gh deploy
-                      [--app-slug SLUG]
-                      [--match-regex M_REGEX | --skip-regex S_REGEX]
-                      (--shared-secret SECRET | --shared-secret-env) [--replace]
-                      (--pat PAT | --pat-env) (--scm-api-url URL)
-                      (--cx-url CX_URL)
-    
-    Deployment Options
+        --app-slug SLUG             The Github app slug for the CxOneFlow app.
 
-    --cx-url CX_URL             The base URL for the CxOneFlow endpoint 
-                                (e.g. https://cxoneflow.corp.com)
+        --app-key KEYFILE           The path to the app private key file.
+        """
+        args = self._get_opts(self.gh_audit.__doc__, ["gh", "audit"] + args, help)
 
-    --shared-secret SECRET     The shared secret configured in the service hook
+        return await GithubAuditor(
+            outfile=args["--outfile"],
+            only_not_cfg=args["--no-config"],
+            concurrency=self.concurrency,
+            match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
+            scm_api_service=GHService(
+                api_base_url=args["--scm-api-url"],
+                app_slug=args["--app-slug"],
+                app_key_file=args["--app-key"],
+                auth=HTTPBearerAuth(
+                    SCMTool.resolve_from_env(args.get("--pat"), "CX_PAT")
+                ),
+                proxy=self.proxy,
+                ssl_verify=not self.ssl_ignore,
+            ),
+            cxoneflow_url=args["--cx-url"],
+        ).execute()
 
-    --shared-secret-env        Obtain the shared secret from the environment variable 'CX_SECRET'
+    async def gh_deploy(self, args: List[str], help: bool = False):
+        """Usage: cxoneflow-audit gh deploy
+                          [--app-slug SLUG]
+                          [--match-regex M_REGEX | --skip-regex S_REGEX]
+                          (--shared-secret SECRET | --shared-secret-env) [--replace]
+                          (--pat PAT | --pat-env) (--scm-api-url URL)
+                          (--cx-url CX_URL)
 
-    --replace                  If an existing webhook configuration is found, replace it.
+        Deployment Options
 
-    Filtering Options
+        --cx-url CX_URL             The base URL for the CxOneFlow endpoint
+                                    (e.g. https://cxoneflow.corp.com)
 
-    --match-regex M_REGEX      Regular expression matching organization names that
-                               should be configured to send events to CxOneFlow.
+        --shared-secret SECRET     The shared secret configured in the service hook
 
-    --skip-regex S_REGEX       Regular expression matching organization names that
-                               should not be configured to send events to CxOneFlow.
-    SCM Options
+        --shared-secret-env        Obtain the shared secret from the environment variable 'CX_SECRET'
 
-    --pat PAT                  An SCM PAT with appropriate privileges.
+        --replace                  If an existing webhook configuration is found, replace it.
 
-    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+        Filtering Options
 
-    --scm-api-url URL          The URL to the SCM's API endpoint 
-                               (e.g. https://api.github.com, https://github.corp.com/api/v3/)
+        --match-regex M_REGEX      Regular expression matching organization names that
+                                   should be configured to send events to CxOneFlow.
 
-    Github App Options
-  
-    --app-slug SLUG            Skip webhook deployment if a Github app with this slug is installed
-                               in the organization.
-    """
-    args = self._get_opts(self.gh_deploy.__doc__, ["gh", "deploy"] + args, help)
+        --skip-regex S_REGEX       Regular expression matching organization names that
+                                   should not be configured to send events to CxOneFlow.
+        SCM Options
 
-    return await GithubDeployer(concurrency=self.concurrency, proxy=self.proxy, targets=None,
-                            ignore_ssl_errors=self.ssl_ignore,
-                            match=self._matcher_factory(args['--skip-regex'], args['--match-regex']),
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
-                            cx_url=args['--cx-url'], scm_url=args['--scm-api-url'],
-                            app_slug=args['--app-slug'],
-                            shared_secret=SCMTool.resolve_from_env(args['--shared-secret'], "CX_SECRET"),
-                            replace=args['--replace']).execute()
+        --pat PAT                  An SCM PAT with appropriate privileges.
 
-  async def gh_remove(self, args : List[str], help : bool = False):
-    """Usage: cxoneflow-audit gh remove
-                      [(--app-slug SLUG --app-key KEYFILE)]
-                      [--match-regex M_REGEX | --skip-regex S_REGEX]
-                      (--pat PAT | --pat-env) (--scm-api-url URL)
-                      (--cx-url CX_URL)
-    
-    Removal Options
+        --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
 
-    --cx-url CX_URL             The base URL for the CxOneFlow endpoint 
-                                (e.g. https://cxoneflow.corp.com)
+        --scm-api-url URL          The URL to the SCM's API endpoint
+                                   (e.g. https://api.github.com, https://github.corp.com/api/v3/)
 
-    Filtering Options
+        Github App Options
 
-    --match-regex M_REGEX      Regular expression matching organization names that
-                               should have configurations removed.
+        --app-slug SLUG            Skip webhook deployment if a Github app with this slug is installed
+                                   in the organization.
+        """
+        args = self._get_opts(self.gh_deploy.__doc__, ["gh", "deploy"] + args, help)
 
-    --skip-regex S_REGEX       Regular expression matching organization names that
-                               should not have configurations removed.
-    SCM Options
+        return await GithubDeployer(
+            concurrency=self.concurrency,
+            match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
+            scm_api_service=GHService(
+                api_base_url=args["--scm-api-url"],
+                app_slug=args["--app-slug"],
+                auth=HTTPBearerAuth(
+                    SCMTool.resolve_from_env(args.get("--pat"), "CX_PAT")
+                ),
+                proxy=self.proxy,
+                ssl_verify=not self.ssl_ignore,
+            ),
+            cxoneflow_url=args["--cx-url"],
+            shared_secret=SCMTool.resolve_from_env(
+                args.get("--shared-secret"), "CX_SECRET"
+            ),
+            replace=args["--replace"],
+        ).execute()
 
-    --pat PAT                  An SCM PAT with appropriate privileges.
+    async def gh_remove(self, args: List[str], help: bool = False):
+        """Usage: cxoneflow-audit gh remove
+                          [(--app-slug SLUG) (--app-key KEYFILE)]
+                          [--match-regex M_REGEX | --skip-regex S_REGEX]
+                          (--pat PAT | --pat-env) (--scm-api-url URL)
+                          (--cx-url CX_URL)
 
-    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+        Removal Options
 
-    --scm-api-url URL          The URL to the SCM's API endpoint 
-                               (e.g. https://api.github.com, https://github.corp.com/api/v3/)
+        --cx-url CX_URL             The base URL for the CxOneFlow endpoint
+                                    (e.g. https://cxoneflow.corp.com)
 
-    Github App Options
-  
-    --app-slug SLUG            Remove the Github app with this slug from the organization.
+        Filtering Options
 
-    --app-key KEYFILE          The path to the Github app private key file.
-    """
-    args = self._get_opts(self.gh_remove.__doc__, ["gh", "remove"] + args, help)
+        --match-regex M_REGEX      Regular expression matching organization names that
+                                   should have configurations removed.
 
-    return await GithubRemover(concurrency=self.concurrency, proxy=self.proxy, targets=None,
-                            ignore_ssl_errors=self.ssl_ignore,
-                            match=self._matcher_factory(args['--skip-regex'], args['--match-regex']),
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
-                            cx_url=args['--cx-url'], scm_url=args['--scm-api-url'],
-                            app_slug=args['--app-slug'], app_key_file=args["--app-key"]).execute()
+        --skip-regex S_REGEX       Regular expression matching organization names that
+                                   should not have configurations removed.
+        SCM Options
 
-  async def gh_kickoff(self, args : List[str], help : bool = False):
-    """Usage: cxoneflow-audit gh kickoff [--match-regex M_REGEX | --skip-regex S_REGEX]
-                      (--pat PAT | --pat-env) (--scm-api-url URL) [--audit-file AUDIT_FILE]
-                      (--ssh-key-path SSHKEY) [--ssh-key-pass SSHPASS | --ssh-key-env]
-                      [--app-slug SLUG] (--cx-url CX_URL)
-    
-    Deployment Options
+        --pat PAT                  An SCM PAT with appropriate privileges.
 
-    --cx-url CX_URL             The base URL for the CxOneFlow endpoint 
-                                (e.g. https://cxoneflow.corp.com)
+        --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
 
-    --audit-file AUDIT_FILE     A path to a file where audit data about the
-                                started scans is written. Data is appended
-                                to the file if it exists. [Default: kickoff_audit.csv]
+        --scm-api-url URL          The URL to the SCM's API endpoint
+                                   (e.g. https://api.github.com, https://github.corp.com/api/v3/)
 
-    --ssh-key-path SSHKEY       The path to a file containing a PEM encoded
-                                SSH private key for authenticating with the
-                                CxOneFlow kickoff API
+        Github App Options
 
-    --ssh-key-pass SSHPASS      The password to the SSH private key if it is
-                                password protected.
+        --app-slug SLUG            Remove the Github app with this slug from the organization.
 
-    --ssh-key-env               Indicates that the SSH key password should be
-                                obtained from the environment variable CX_SSHPASS.
+        --app-key KEYFILE          The path to the Github app private key file.
+        """
+        args = self._get_opts(self.gh_remove.__doc__, ["gh", "remove"] + args, help)
 
-    Filtering Options
+        return await GithubRemover(
+            concurrency=self.concurrency,
+            match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
+            scm_api_service=GHService(
+                api_base_url=args["--scm-api-url"],
+                app_slug=args["--app-slug"],
+                app_key_file=args["--app-key"],
+                auth=HTTPBearerAuth(
+                    SCMTool.resolve_from_env(args.get("--pat"), "CX_PAT")
+                ),
+                proxy=self.proxy,
+                ssl_verify=not self.ssl_ignore,
+            ),
+            cxoneflow_url=args["--cx-url"],
+        ).execute()
 
-    --match-regex M_REGEX      Regular expression matching organization names that
-                               should have repositories iterated for the first scan.
+    async def gh_kickoff(self, args: List[str], help: bool = False):
+        """Usage: cxoneflow-audit gh kickoff [--match-regex M_REGEX | --skip-regex S_REGEX]
+                          (--pat PAT | --pat-env) (--scm-api-url URL) [--audit-file AUDIT_FILE]
+                          (--ssh-key-path SSHKEY) [--ssh-key-pass SSHPASS | --ssh-key-env]
+                          [--app-slug SLUG] (--cx-url CX_URL)
 
-    --skip-regex S_REGEX       Regular expression matching organization names that
-                               should not have repositories iterated for the first scan.
+        Deployment Options
 
-    SCM Options
+        --cx-url CX_URL             The base URL for the CxOneFlow endpoint
+                                    (e.g. https://cxoneflow.corp.com)
 
-    --pat PAT                  An SCM PAT with appropriate privileges.
+        --audit-file AUDIT_FILE     A path to a file where audit data about the
+                                    started scans is written. Data is appended
+                                    to the file if it exists. [Default: kickoff_audit.csv]
 
-    --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
+        --ssh-key-path SSHKEY       The path to a file containing a PEM encoded
+                                    SSH private key for authenticating with the
+                                    CxOneFlow kickoff API
 
-    --scm-api-url URL          The URL to the SCM's API endpoint 
-                               (e.g. https://api.github.com, https://github.corp.com/api/v3/)
+        --ssh-key-pass SSHPASS      The password to the SSH private key if it is
+                                    password protected.
 
-    Github App Options
-  
-    --app-slug SLUG            The slug for the Github app that is used for cloning repositories
-                               when CxOneFlow handles events generated by the app.
-    """
-    args = self._get_opts(self.gh_kickoff.__doc__, ["gh", "kickoff"] + args, help)
+        --ssh-key-env               Indicates that the SSH key password should be
+                                    obtained from the environment variable CX_SSHPASS.
 
-    return await GithubKicker(concurrency=self.concurrency, proxy=self.proxy, targets=None,
-                            ignore_ssl_errors=self.ssl_ignore, audit_file_path=args['--audit-file'],
-                            match=self._matcher_factory(args['--skip-regex'], args['--match-regex']), 
-                            pat=SCMTool.resolve_from_env(args['--pat'], "CX_PAT"),
-                            ssh_private_key_path=args['--ssh-key-path'], 
-                            ssh_private_key_password=SCMTool.resolve_from_env(args['--ssh-key-pass'], "CX_SSHPASS"),
-                            cx_url=args['--cx-url'], scm_url=args['--scm-api-url'],
-                            app_slug=args['--app-slug']).execute()
+        Filtering Options
 
-  async def __call__(self, args : List[str], help : bool = False):
-    """Usage: cxoneflow-audit gh <command> [<args>...]
+        --match-regex M_REGEX      Regular expression matching organization names that
+                                   should have repositories iterated for the first scan.
 
-    <command> can be one of:
-    audit       Execute an audit for CxOneFlow webhook or Github app deployment.
+        --skip-regex S_REGEX       Regular expression matching organization names that
+                                   should not have repositories iterated for the first scan.
 
-    deploy      Deploy CxOneFlow webhooks on the projects in the specified organizations.
+        SCM Options
 
-    remove      Remove CxOneFlow webhooks on the projects in the specified organizations.
+        --pat PAT                  An SCM PAT with appropriate privileges.
 
-    kickoff     Iterate through repositories in the specified orginizations
-                and perform an initial scan on the default branch.
+        --pat-env                  Obtain the PAT from the environment variable 'CX_PAT'
 
-    Use "cxoneflow-audit help gh <command>" for further help.
-    """
-    tool = [] if help else ["gh"]
-    return await self._dispatch(self.__call__.__doc__, "<command>", "<args>", tool + args, help)
-  
+        --scm-api-url URL          The URL to the SCM's API endpoint
+                                   (e.g. https://api.github.com, https://github.corp.com/api/v3/)
+
+        Github App Options
+
+        --app-slug SLUG            The slug for the Github app that is used for cloning repositories
+                                   when CxOneFlow handles events generated by the app.
+        """
+        args = self._get_opts(self.gh_kickoff.__doc__, ["gh", "kickoff"] + args, help)
+
+        return await GithubKicker(
+            concurrency=self.concurrency,
+            audit_file_path=args["--audit-file"],
+            match=self._matcher_factory(args["--skip-regex"], args["--match-regex"]),
+            scm_api_service=GHService(
+                api_base_url=args["--scm-api-url"],
+                app_slug=args["--app-slug"],
+                auth=HTTPBearerAuth(
+                    SCMTool.resolve_from_env(args.get("--pat"), "CX_PAT")
+                ),
+                proxy=self.proxy,
+                ssl_verify=not self.ssl_ignore,
+            ),
+            ssh_private_key_path=args["--ssh-key-path"],
+            ssh_private_key_password=SCMTool.resolve_from_env(
+                args.get("--ssh-key-pass"), "CX_SSHPASS"
+            ),
+            cxoneflow_url=args["--cx-url"],
+        ).execute()
+
+    async def __call__(self, args: List[str], help: bool = False):
+        """Usage: cxoneflow-audit gh <command> [<args>...]
+
+        <command> can be one of:
+        audit       Execute an audit for CxOneFlow webhook or Github app deployment.
+
+        deploy      Deploy CxOneFlow webhooks on the projects in the specified organizations.
+
+        remove      Remove CxOneFlow webhooks on the projects in the specified organizations.
+
+        kickoff     Iterate through repositories in the specified orginizations
+                    and perform an initial scan on the default branch.
+
+        Use "cxoneflow-audit help gh <command>" for further help.
+        """
+        tool = [] if help else ["gh"]
+        return await self._dispatch(
+            self.__call__.__doc__, "<command>", "<args>", tool + args, help
+        )

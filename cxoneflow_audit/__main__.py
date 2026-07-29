@@ -9,130 +9,142 @@ from cxoneflow_audit.__version__ import __version__, PROGNAME
 from cxoneflow_audit.log import bootstrap
 from cxoneflow_audit.scm.ado import AdoTool
 from cxoneflow_audit.scm.gh import GithubTool
+from cxoneflow_audit.scm.bitbucket.cloud import BitBucketCloudTool
 
 # pylint: disable=E1101
 requests.packages.urllib3.disable_warnings()
 
-DEFAULT_LOGLEVEL="INFO"
+DEFAULT_LOGLEVEL = "INFO"
+
 
 def resolve_from_env(value, env_key):
-  if value is not None:
-    return value
-  elif env_key in os.environ.keys():
-    return os.environ[env_key]
-  else:
-    return None
-
+    if value is not None:
+        return value
+    elif env_key in os.environ.keys():
+        return os.environ[env_key]
+    else:
+        return None
 
 
 def common_args(args):
-  return {
-    "concurrency" : Semaphore(int(args['-t'])),
-    "proxy" : { "http" : args['--proxy'], "https" : args['--proxy']} if args['--proxy'] is not None else None,
-    "ssl_ignore" : args['-k']
-  }
+    return {
+        "concurrency": Semaphore(int(args["-t"])),
+        "proxy": (
+            {"http": args["--proxy"], "https": args["--proxy"]}
+            if args["--proxy"] is not None
+            else None
+        ),
+        "ssl_ignore": args["-k"],
+    }
 
 
 async def main():
-  """Usage: cxoneflow-audit [--level LOGLEVEL] [--log-file LOGFILE] [-qk] [-t THREADS] [--proxy PROXY_URL] <scm> [<args>...]
-  
-  <scm> can be one of:
-  adoe                Commands for Azure DevOps
-  gh                  Commands for Github
-  gl                  Commands for Gitlab
-  bbdc                Commands for BitBucket Data Center
+    """Usage: cxoneflow-audit [--level LOGLEVEL] [--log-file LOGFILE] [-qk] [-t THREADS] [--proxy PROXY_URL] <scm> [<args>...]
 
-  Use "cxoneflow-audit help <scm>" for help details for each SCM.
+    <scm> can be one of:
+    adoe                Commands for Azure DevOps
+    gh                  Commands for Github
+    gl                  Commands for Gitlab
+    bbc                 Commands for BitBucket Cloud
+    bbdc                Commands for BitBucket Data Center
 
-  Runtime Information
+    Use "cxoneflow-audit help <scm>" for help details for each SCM.
 
-  -h,--help           Use this parameter to show help for any command.
+    Runtime Information
 
-  -v,--version        Show version and exit.
+    -h,--help           Use this parameter to show help for any command.
 
-  
-  Logging Options
+    -v,--version        Show version and exit.
 
-  --level LOGLEVEL    Log level [default: INFO]
-                      Use: DEBUG, INFO, WARNING, ERROR, CRITICAL
-  
-  --log-file LOGFILE  A file where logs are written.
 
-  -q                  Do not output logs to the console.
+    Logging Options
 
-  
-  Runtime Options
+    --level LOGLEVEL    Log level [default: INFO]
+                        Use: DEBUG, INFO, WARNING, ERROR, CRITICAL
 
-  -t THREADS         The number of concurrent SCM read/write operations. [Default: 4]
-  
-  -k                 Ignore SSL verification failures. [Default: False]
+    --log-file LOGFILE  A file where logs are written.
 
-  --proxy PROXY_URL  A proxy server to use for communication.
-  
-  """
+    -q                  Do not output logs to the console.
 
-  can_log = False
 
-  try:
+    Runtime Options
 
-    args = docopt(main.__doc__, version=PROGNAME, options_first = True)
+    -t THREADS         The number of concurrent SCM read/write operations. [Default: 4]
 
-    bootstrap(DEFAULT_LOGLEVEL if args['--level'] is None else args['--level'],
-              not args['-q'], args['--log-file'])
+    -k                 Ignore SSL verification failures. [Default: False]
 
-    _log = logging.getLogger("main")
-    can_log = True
-    _log.info(PROGNAME)
-    _log.debug(f"{PROGNAME} START")
+    --proxy PROXY_URL  A proxy server to use for communication.
 
-    result = 1
+    """
 
-    main_map = {
-      "adoe" : AdoTool(**(common_args(args))),
-      "gh" : GithubTool(**(common_args(args))),
-    }
+    can_log = False
 
-    scm = args['<scm>']
+    try:
 
-    if scm in ['help', None]:
-      scm = args['<args>'][0] if len(args['<args>']) > 0 else None
+        args = docopt(main.__doc__, version=PROGNAME, options_first=True)
 
-      if scm is None:
-        scm_list = ",".join(main_map.keys())
-        print(f"Please specify one of the following scm names: {scm_list}")
-      elif not scm in main_map.keys():
-        print(f"{scm} not implemented.")
-      else:
-        result = await main_map[scm](args['<args>'], True)
-    elif scm in main_map.keys():
-      result = await main_map[scm](args['<args>'])
-    else:
-      raise Exception(f"Unknown SCM: {scm}")
+        bootstrap(
+            DEFAULT_LOGLEVEL if args["--level"] is None else args["--level"],
+            not args["-q"],
+            args["--log-file"],
+        )
 
-    _log.debug(f"{PROGNAME} END with exit code {result}")
+        _log = logging.getLogger("main")
+        can_log = True
+        _log.info(PROGNAME)
+        _log.debug(f"{PROGNAME} START")
 
-    sys.exit (result)
-  except DocoptExit as bad_args:
-    print("Incorrect arguments provided.")
-    print(bad_args)
-    sys.exit(1)
-  except NotImplementedError as ni:
-    if can_log:
-      _log.exception(ni)
-    else:
-      print(f"Not implemented: {ni}")
-    sys.exit(1)
-  except SystemExit:
-    pass
-  except BaseException as ex:
-    if can_log:
-      _log.exception(ex)
-    else:
-      print(ex)
-    sys.exit(1)
+        result = 1
+
+        main_map = {
+            "adoe": AdoTool(**(common_args(args))),
+            "gh": GithubTool(**(common_args(args))),
+            "bbc": BitBucketCloudTool(**(common_args(args))),
+        }
+
+        scm = args["<scm>"]
+
+        if scm in ["help", None]:
+            scm = args["<args>"][0] if len(args["<args>"]) > 0 else None
+
+            if scm is None:
+                scm_list = ",".join(main_map.keys())
+                print(f"Please specify one of the following scm names: {scm_list}")
+            elif not scm in main_map.keys():
+                print(f"{scm} not implemented.")
+            else:
+                result = await main_map[scm](args["<args>"], True)
+        elif scm in main_map.keys():
+            result = await main_map[scm](args["<args>"])
+        else:
+            raise Exception(f"Unknown SCM: {scm}")
+
+        _log.debug(f"{PROGNAME} END with exit code {result}")
+
+        sys.exit(result)
+    except DocoptExit as bad_args:
+        print("Incorrect arguments provided.")
+        print(bad_args)
+        sys.exit(1)
+    except NotImplementedError as ni:
+        if can_log:
+            _log.exception(ni)
+        else:
+            print(f"Not implemented: {ni}")
+        sys.exit(1)
+    except SystemExit:
+        pass
+    except BaseException as ex:
+        if can_log:
+            _log.exception(ex)
+        else:
+            print(ex)
+        sys.exit(1)
+
 
 if __name__ == "__main__":
-  asyncio.run(main())
+    asyncio.run(main())
+
 
 def cli_entry():
-  asyncio.run(main())
+    asyncio.run(main())

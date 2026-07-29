@@ -1,0 +1,124 @@
+name: Publish a Release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "The version tag to use in the form of x.x.x"
+        required: true
+        type: string
+      prerelease:
+        description: "Check if this is to publish a pre-release."
+        required: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  tag-repo:
+    runs-on: cx-public-ubuntu-x64
+    outputs:
+      tag: ${{ steps.tag-string.outputs.tag }}
+    permissions:
+      contents: write
+    steps:
+      - name: Create tag string
+        run: |
+          [ ${{ inputs.prerelease }} = false ] && echo "tag=${{ inputs.version }}" >> $GITHUB_OUTPUT || \
+            echo "tag=${{ inputs.version }}rc$GITHUB_RUN_NUMBER" >> $GITHUB_OUTPUT
+        id: tag-string
+
+      - name: Validate no tag
+        run: |
+          set +e
+          git clone --branch ${{ steps.tag-string.outputs.tag }} --depth=1 $GITHUB_SERVER_URL/$GITHUB_REPOSITORY > /dev/null 2>&1 && exit 1
+          set -e
+
+      - name: Fetch Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Set Tag
+        run: |
+          git tag '${{ steps.tag-string.outputs.tag }}'
+          git push origin '${{ steps.tag-string.outputs.tag }}'
+
+
+  build-wheel:
+    needs: [tag-repo]
+    uses: ./.github/workflows/build-package.yml
+    secrets: inherit
+    with:
+      tag: ${{ needs.tag-repo.outputs.tag }}
+      version: ${{ inputs.version }}
+
+  publish-release:
+    runs-on: cx-public-ubuntu-x64
+    permissions:
+      contents: write
+    needs: [tag-repo, build-wheel]
+    steps:
+
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405
+        with:
+          python-version: "3.12"
+
+      - name: Download package wheel
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: whl-${{ github.run_number }}
+
+      - name: Make release text
+        run: |
+          WHEEL_NAME=$(basename $(ls *.whl))
+          WHEEL_HASH=$(pip hash $WHEEL_NAME | grep "^--")
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/download/${{ needs.tag-repo.outputs.tag }}/$WHEEL_NAME"
+
+          echo "# CxOneFlow Audit Tool ${{ needs.tag-repo.outputs.tag }}" > release.md
+
+          echo 'Installation can be performed by executing the following in a command shell:' >> release.md
+
+          echo '```' >> release.md
+          echo pip install $RELEASE_URL >> release.md
+          echo '```' >> release.md
+
+          echo "## Hashes" >> release.md
+          echo "### $WHEEL_NAME" >> release.md
+          echo '```' >> release.md
+          echo "$WHEEL_HASH" >> release.md
+          echo '```' >> release.md
+
+      - name: Create GitHub release
+        id: create_release
+        uses: step-security/release-action@a0d8e0f90f554c15366ca2c9046bf4090d24adbe # v1.21.0
+        with:
+          allowUpdates: true
+          artifactErrorsFailBuild: true
+          artifacts: ./*.whl
+          bodyFile: release.md
+          name: ${{ needs.tag-repo.outputs.tag }}
+          prerelease: ${{ inputs.prerelease }}
+          tag: ${{ needs.tag-repo.outputs.tag }}
+
+
+  remove-tag-on-failure:
+    runs-on: cx-public-ubuntu-x64
+    needs: [tag-repo, publish-release]
+    permissions:
+      contents: write
+    if: (failure() || cancelled()) && needs.tag-repo.result == 'success'
+    steps:
+      - name: Fetch Code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd
+
+      - name: Remove tag
+        run: git push origin ':refs/tags/${{ needs.tag-repo.outputs.tag }}'
+
+  artifact-cleanup:
+    runs-on: cx-public-ubuntu-x64
+    needs: [publish-release]
+    if: always()
+    steps:
+      - uses: step-security/delete-artifact@9a5b2d6793eb97cf052deddb87cd073aabb77385 # v6.0.0
+        with:
+          name: |
+            whl-${{ github.run_number }}
