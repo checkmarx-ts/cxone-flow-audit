@@ -98,8 +98,6 @@ jobs:
     with:
       tag: ${{ needs.tag-repo.outputs.tag }}
       version: ${{ inputs.version }}
-      buildonly: ${{ inputs.prerelease }}
-
 
   # publish-release:
   #   permissions:
